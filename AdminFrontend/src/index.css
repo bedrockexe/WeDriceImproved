@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 40 15% 97%;
+    --foreground: 0 0% 10%;
+
+    --card: 40 15% 97%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 140 45% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 140 40% 95%;
+    --secondary-foreground: 140 45% 20%;
+
+    --muted: 140 20% 92%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 140 45% 90%;
+    --accent-foreground: 140 45% 20%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 140 20% 88%;
+    --input: 140 20% 90%;
+    --ring: 140 45% 45%;
+
+    --radius: 0.5rem;
+    
+    /* Custom colors for dashboard */
+    --sidebar-bg: 140 50% 95%;
+    --sidebar-active: 140 45% 45%;
+    --sidebar-text: 0 0% 20%;
+    
+    --stat-blue: 195 60% 55%;
+    --stat-green: 140 60% 45%;
+    --stat-orange: 35 90% 55%;
+    --stat-red: 0 70% 50%;
+    --stat-pink: 330 70% 60%;
+    
+    --status-pending: 45 95% 60%;
+    --status-active: 140 60% 45%;
+    --status-completed: 195 60% 55%;
+    --status-maintenance: 45 95% 70%;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 140 45% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 140 45% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

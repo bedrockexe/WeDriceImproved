@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+.react-datepicker__day--booked {
+  background-color: #fecaca !important; /* red-200 */
+  color: #b91c1c !important;            /* red-700 */
+  border-radius: 50%;
+}
+
+html {
+  scroll-behavior: smooth;
+}

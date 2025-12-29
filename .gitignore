@@ -41,6 +41,11 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Lock files (uncomment the one you want to track)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 
@@ -81,6 +86,7 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+dist-ssr
 
 # Gatsby files
 .cache/
@@ -125,6 +131,17 @@ dist
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
 # yarn v3
 .pnp.*
 .yarn/*
@@ -137,3 +154,6 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Local development files
+*.local
