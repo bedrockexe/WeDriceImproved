@@ -11,8 +11,6 @@ const BookingSchema = new mongoose.Schema({
     pickupLocation: { type: String, required: true },
     returnLocation: { type: String, required: true },
     totalPrice: { type: Number, required: true },
-    unread: { type: Boolean, default: true },
-    trashed: { type: Boolean, default: false },
     status: { type: String, enum: ['pending', 'approved', 'declined', 'completed', 'canceled', 'ongoing'], default: 'pending' },
     declineReason: { type: String },
     modifiedCount: { type: Number, default: 0 },

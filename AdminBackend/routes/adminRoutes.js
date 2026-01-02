@@ -4,6 +4,8 @@ import Booking from "../models/Booking.js";
 import jwt from "jsonwebtoken";
 import adminAuth from "../middleware/authentication.js";
 import upload from "../config/multer.js";
+import User from "../models/User.js";
+import AdminNotification from "../models/AdminNotifications.js";
 
 const router = express.Router();
 
@@ -250,45 +252,30 @@ router.put("/change-password", adminAuth, async (req, res) => {
 
 router.get("/notifications", adminAuth, async (req, res) => {
   try {
-    console.log("Fetching notifications for admin");
-    const notificationList = ["New booking received", "Booking Completed", "Booking Ongoing" ];
-    const allowedStatuses = ["pending", "ongoing", "completed"];
-    const bookings = await Booking.find({status: { $in: allowedStatuses }, trashed: false}).sort({ createdAt: -1 });
-    const notifications = bookings.map(booking => {
-      let action = "";
-      let notificationText = "";
-      let bookingId = booking.bookingId;
-      if (booking.status === "pending") {
-        action = "New booking received";
-        notificationText = `${booking.customerName} requested a ${booking.carName} booking (BOOKING ID: ${bookingId})`;
-      } else if (booking.status === "ongoing") {
-        action = "Booking Ongoing";
-        notificationText = `${booking.customerName}'s booking is now ongoing (BOOKING ID: ${bookingId})`;
-      } else if (booking.status === "completed") {
-        action = "Booking Completed";
-        notificationText = `${booking.customerName}'s booking has been completed (BOOKING ID: ${bookingId})`;
-      } else {
-        action = "Booking Updated";
-        notificationText = `Booking (BOOKING ID: ${bookingId}) status updated to ${booking.status}`;
-      }
-      return {
-        action,
-        notificationText,
-        bookingId,
-        unread: booking.unread,
-        timeAgo: timeAgo(booking.updatedAt),
-      };
-    });
+    const notifications = await AdminNotification.find({ isTrashed: false }).sort({ createdAt: -1 });
 
-    res.status(200).json({ notifications });
+    const formattedNotifications = notifications.map(notification => ({
+      id: notification._id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      isRead: notification.isRead,
+      bookingId: notification.bookingId,
+      userId: notification.userId,
+      timeAgo: timeAgo(notification.createdAt),
+    }));
+
+    res.status(200).json({ notifications: formattedNotifications });
+
   } catch (error) {
-    
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch notifications" });
   }
 });
 
 router.get("/notifications/unread-count", adminAuth, async (req, res) => {
   try {
-    const unreadCount = await Booking.countDocuments({ unread: true, trashed: false });
+    const unreadCount = await AdminNotification.countDocuments({ isRead: false, isTrashed: false });
     res.status(200).json({ unreadCount });
   } catch (error) {
     console.error(error);
@@ -296,15 +283,15 @@ router.get("/notifications/unread-count", adminAuth, async (req, res) => {
   }
 });
 
-router.put("/notifications/mark-read/:bookingId", adminAuth, async (req, res) => {
+router.put("/notifications/mark-read/:id", adminAuth, async (req, res) => {
   try {
-    const { bookingId } = req.params;
-    const booking = await Booking.findOne({ bookingId: bookingId });
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+    const { id } = req.params;
+    const notification = await AdminNotification.findById(id);
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
     }
-    booking.unread = false;
-    await booking.save();
+    notification.isRead = true;
+    await notification.save();
     res.status(200).json({ message: "Notification marked as read" });
   } catch (error) {
     console.error(error);
@@ -314,7 +301,7 @@ router.put("/notifications/mark-read/:bookingId", adminAuth, async (req, res) =>
 
 router.put("/notifications/mark-all-read", adminAuth, async (req, res) => {
   try {
-    await Booking.updateMany({ unread: true }, { $set: { unread: false } });
+    await AdminNotification.updateMany({ isRead: false }, { $set: { isRead: true } });
     res.status(200).json({ message: "All notifications marked as read" });
   } catch (error) {
     console.error(error);
@@ -324,7 +311,7 @@ router.put("/notifications/mark-all-read", adminAuth, async (req, res) => {
 
 router.put("/notifications/mark-all-unread", adminAuth, async (req, res) => {
   try {
-    await Booking.updateMany({ unread: false }, { $set: { unread: true } });
+    await AdminNotification.updateMany({ isRead: true }, { $set: { isRead: false } });
     res.status(200).json({ message: "All notifications marked as unread" });
   } catch (error) {
     console.error(error);
@@ -332,35 +319,35 @@ router.put("/notifications/mark-all-unread", adminAuth, async (req, res) => {
   }
 });
 
-router.patch("/notifications/toggle-unread/:bookingId", adminAuth, async (req, res) => {
+router.patch("/notifications/toggle-unread/:id", adminAuth, async (req, res) => {
   try {
-    const { bookingId } = req.params;
-    const booking = await Booking.findOne({ bookingId: bookingId });
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+    const { id } = req.params;
+    const notification = await AdminNotification.findById(id);
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
     }
-    booking.unread = !booking.unread;
-    await booking.save();
-    res.status(200).json({ message: "Notification unread status toggled", unread: booking.unread });
+    notification.isRead = !notification.isRead;
+    await notification.save();
+    res.status(200).json({ message: "Notification unread status toggled", unread: notification.isRead });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to toggle notification unread status" });
   }
 });
 
-router.patch("/notifications/delete/:bookingId", adminAuth, async (req, res) => {
+router.patch("/notifications/delete/:id", adminAuth, async (req, res) => {
   try {
-    const { bookingId } = req.params;
-    const booking = await Booking.findOne({ bookingId: bookingId });
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+    const { id } = req.params;
+    const notification = await AdminNotification.findById(id);
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
     }
-    booking.trashed = true;
-    await booking.save();
-    res.status(200).json({ message: "Booking moved to trash" });
+    notification.isTrashed = true;
+    await notification.save();
+    res.status(200).json({ message: "Notification moved to trash" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Failed to move booking to trash" });
+    res.status(500).json({ message: "Failed to move notification to trash" });
   }
 });
 

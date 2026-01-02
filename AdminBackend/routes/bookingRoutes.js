@@ -1,7 +1,9 @@
 import express from "express";
 import Booking from "../models/Booking.js";
 import Payment from "../models/Payment.js";
-import deleteFolder from "./deletefolder.js";
+import ClientNotifications from "../models/ClientNotifications.js";
+import User from "../models/User.js";
+import { io } from "../server.js";
 
 const router = express.Router();
 
@@ -17,6 +19,7 @@ router.get("/", async (req, res) => {
 router.put('/approve/:id', async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
+    const user = await User.findOne({ userId: booking.renterId });
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
@@ -41,6 +44,21 @@ router.put('/approve/:id', async (req, res) => {
     transaction.status = 'completed';
 
     await transaction.save();
+
+    await ClientNotifications.create({
+      userId: booking.renterId,
+      title: "Booking Approved",
+      message: `Your booking with ID ${booking.bookingId} has been approved.`,
+      bookingId: booking.bookingId,
+      type: "booking"
+    });
+
+    io.to(booking.renterId).emit('new-notification', {
+      userId: booking.renterId,
+      message: `Your booking with ID ${booking.bookingId} has been approved.`,
+      bookingId: booking.bookingId,
+      type: "booking"
+    });
 
     res.status(200).json({
       message: 'Booking approved successfully',
@@ -78,6 +96,21 @@ router.put('/decline/:id', async (req, res) => {
     booking.declineReason = declineReason;
 
     await booking.save();
+
+    await ClientNotifications.create({
+      userId: booking.renterId,
+      title: "Booking Declined",
+      message: `Your booking with ID ${booking.bookingId} has been declined. Reason: ${declineReason}`,
+      bookingId: booking.bookingId,
+      type: "booking"
+    });
+
+    io.to(booking.renterId).emit('new-notification', {
+      userId: booking.renterId,
+      message: `Your booking with ID ${booking.bookingId} has been declined. Reason: ${declineReason}`,
+      bookingId: booking.bookingId,
+      type: "booking"
+    });
 
     res.status(200).json({
       message: 'Booking declined successfully',

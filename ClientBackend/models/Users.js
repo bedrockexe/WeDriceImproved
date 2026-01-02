@@ -24,6 +24,8 @@ const UserSchema = new mongoose.Schema(
     totalSpent: { type: Number, default: 0 },
     bookings: [String],
     transactions: [String],
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true }

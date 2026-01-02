@@ -129,8 +129,8 @@ export default function NotificationsPage() {
               }`}
             >
               <div onClick={() => handleNotificationClick(notif.bookingId)}>
-                <p className="text-sm font-medium text-gray-900">{notif.action}</p>
-                <p className="text-sm text-gray-600 mt-0.5">{notif.notificationText}</p>
+                <p className="text-sm font-medium text-gray-900">{notif.title}</p>
+                <p className="text-sm text-gray-600 mt-0.5">{notif.message}</p>
                 <p className="text-xs text-gray-400 mt-1">{notif.timeAgo}</p>
               </div>
 

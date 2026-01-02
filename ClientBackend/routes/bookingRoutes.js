@@ -3,6 +3,8 @@ import Bookings from '../models/Bookings.js';
 import Users from '../models/Users.js';
 import Cars from '../models/Cars.js';
 import Transactions from '../models/Transactions.js';
+import ClientNotifications from '../models/ClientNotifications.js';
+import AdminNotifications from '../models/AdminNotifications.js';
 import multer from 'multer';
 import cloudinary from '../config/cloudinary.js';
 import { auth } from '../middleware/authentication.js';
@@ -51,7 +53,7 @@ router.post('/create', auth, upload.array("proofOfPayment", 1), async (req, res)
         }
 
         const days = Math.ceil((eDate - sDate) / (1000 * 60 * 60 * 24));
-        const totalPrice = (days * car.pricePerDay) + 500; // Including a fixed fee of 500
+        const totalPrice = (days * car.pricePerDay) + 500;
         const carname = car.name;
         const customername = `${user.firstName} ${user.lastName}`;
         const proofOfPayment = req.files || [];
@@ -106,6 +108,33 @@ router.post('/create', auth, upload.array("proofOfPayment", 1), async (req, res)
             bookingId: newBooking.bookingId,
             type: "booking"
         });
+
+        const newNotification = new Notifications({
+            title: "New Booking Created",
+            message: `Your booking ${newBooking.bookingId} has been created successfully.`,
+            userId: req.user.id,
+            bookingId: newBooking.bookingId
+        });
+
+        await newNotification.save();
+
+        const clientNotification = new ClientNotifications({
+            userId: user.userId,
+            message: `Your booking ${newBooking.bookingId} has been created successfully.`,
+            bookingId: newBooking.bookingId,
+            type: "booking"
+        });
+
+        await clientNotification.save();
+
+        const adminNotification = new AdminNotifications({
+            userId: user.userId,
+            message: `New booking ${newBooking.bookingId} created by user ${user.userId}.`,
+            bookingId: newBooking.bookingId,
+            type: "booking"
+        });
+
+        await adminNotification.save();
 
         res.status(201).json({ message: "Booking created successfully", booking: newBooking });
 
@@ -345,6 +374,33 @@ router.put('/modify/:bookingId', auth, upload.array("proofOfPayment", 1), async 
         }
 
         await booking.save();
+
+        const clientNotification = new ClientNotifications({
+            userId: user.userId,
+            message: `Your booking ${booking.bookingId} is pending modification.`,
+            bookingId: booking.bookingId,
+            type: "booking"
+        });
+
+        await clientNotification.save();
+
+        const adminNotification = new AdminNotifications({
+            userId: user.userId,
+            message: `Booking ${booking.bookingId} modified by user ${user.userId}.`,
+            bookingId: booking.bookingId,
+            type: "booking"
+        });
+
+        await adminNotification.save();
+
+        io.emit("new-notification", {
+            userId: user.userId,
+            message: `Booking modified: ${booking.bookingId}`,
+            bookingId: booking.bookingId,
+            type: "booking"
+        });
+
+
         res.status(200).json({ message: "Booking modified successfully", booking: booking });
     } catch (error) {
         console.error("Error modifying booking:", error);

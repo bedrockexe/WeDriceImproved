@@ -24,6 +24,9 @@ import BookingDetails from "./pages/components/Dashboard/pages/BookingDetails";
 import ModifyBooking from "./pages/components/Dashboard/pages/ModifyBooking";
 import NotFound from "./pages/components/Dashboard/pages/NotFound";
 import Test from "./pages/components/Dashboard/pages/test";
+import NotificationsPage from "./pages/components/Dashboard/pages/Notifications";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 export default function App() {
   return (
@@ -32,6 +35,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
           <Route
             path="/dashboard"
@@ -49,6 +54,7 @@ export default function App() {
             <Route path="edit-account" element={<EditAccount />} />
             <Route path="settings" element={<Settings />} />
             <Route path="bookings" element={<MyBookings />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="bookingdetails/:bookingId" element={<BookingDetails />} />
             <Route path="bookingdetails/modify/:bookingId" element={<ModifyBooking />} />
             <Route path="cars" element={<AvailableCars />} />

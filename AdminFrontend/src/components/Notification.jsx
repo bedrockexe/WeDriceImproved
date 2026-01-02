@@ -17,20 +17,30 @@ export const NotificationPanel = ({ isOpen, onClose }) => {
             console.log("Fetching notifications...");
             try {
                 const response = await axios.get(`${API}/api/admin/notifications`, { withCredentials: true });
-                setNotifications(response.data.notifications.slice(0, 3)); // Show only the latest 3 notifications
+                setNotifications(response.data.notifications.slice(0, 3));
             } catch (error) {
                 console.error("Error fetching notifications:", error);
             }
         };
         fetchNotifications();
     }, []);
-    const handleNotificationClick = async (link) => {
+
+    const handleNotificationClick = async (id) => {
       onClose();
-      searchParams.delete("bookingId");
-      navigate(`/dashboard/bookings?bookingId=${link}`); 
-      await axios.put(`${API}/api/admin/notifications/mark-read/${link}`, {}, { withCredentials: true });
-      window.location.reload();
+      if (bookingId) {
+        searchParams.delete("bookingId");
+        navigate(`/dashboard/bookings?bookingId=${id}`); 
+        await axios.put(`${API}/api/admin/notifications/mark-read/${id}`, {}, { withCredentials: true });
+        window.location.reload();
+      } else if (userId) {
+        searchParams.delete("userId");
+        navigate(`/dashboard/customers?userId=${id}`); 
+        await axios.put(`${API}/api/admin/notifications/mark-read/${id}`, {}, { withCredentials: true });
+        window.location.reload();
+      }
     };
+
+    console.log("Notifications:", notifications);
   return (
     <AnimatePresence>
       {isOpen && (
@@ -67,17 +77,17 @@ export const NotificationPanel = ({ isOpen, onClose }) => {
             <div className="max-h-80 overflow-y-auto">
               {notifications.map((notif) => (
                 <div
-                  key={notif.bookingId}
-                  onClick={() => handleNotificationClick(notif.bookingId)}
+                  key={notif.id}
+                  onClick={() => handleNotificationClick(notif.id)}
                   className={`px-4 py-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 ${
                     notif.unread ? "bg-emerald-50" : ""
                   }`}
                 >
                   <p className="text-sm font-medium text-gray-900">
-                    {notif.action}
+                    {notif.title}
                   </p>
                   <p className="text-xs text-gray-600 mt-0.5">
-                    {notif.notificationText}
+                    {notif.message}
                   </p>
                   <p className="text-[11px] text-gray-400 mt-1">
                     {notif.timeAgo}

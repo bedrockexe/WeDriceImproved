@@ -115,7 +115,6 @@ app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/transactions", transactionRoutes);
 
-// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

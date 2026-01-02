@@ -2,6 +2,7 @@ import express from "express";
 import User from "../models/User.js";
 import mongoose from "mongoose";
 import deleteFolder from "./deletefolder.js";
+import ClientNotifications from "../models/ClientNotifications.js";
 
 
 const router = express.Router();
@@ -51,6 +52,19 @@ router.put('/approve/:id', async (req, res) => {
 
     await user.save();
 
+    await ClientNotifications.create({
+      userId: user.userId,
+      title: "Account Verified",
+      message: `Your account has been verified successfully.`,
+      type: "verification"
+    });
+
+    io.to(user.userId).emit('new-notification', {
+      userId: user.userId,
+      message: `Your account has been verified successfully.`,
+      type: "verification"
+    });
+
     res.status(200).json({
       message: `User ${user.firstName} ${user.lastName} verified successfully`,
       user,
@@ -81,6 +95,19 @@ router.put('/reject/:id', async (req, res) => {
     user.verificationStatus = 'rejected';
     user.rejectionReason = rejectionReason;
     await user.save();
+
+    await ClientNotifications.create({
+      userId: user.userId,
+      title: "Account Rejected",
+      message: `Your account verification has been rejected. Reason: ${rejectionReason}`,
+      type: "verification"
+    });
+
+    io.to(user.userId).emit('new-notification', {
+      userId: user.userId,
+      message: `Your account verification has been rejected. Reason: ${rejectionReason}`,
+      type: "verification"
+    });
 
     res.status(200).json({
       message: `User ${user.firstName} ${user.lastName} rejected successfully`,
