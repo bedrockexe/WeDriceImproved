@@ -4,33 +4,17 @@ import { BellIcon, ChevronDownIcon, MenuIcon, UserIcon } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from "@/authentication/AuthContext";
 import { useNavigate } from 'react-router-dom';
-import { socket } from '@/notification/socket';
 import { toast, Toaster } from 'sonner';
+import { useNotifications } from '../../../../../NotificationWrapper';
 
 const TopNavBar = ({ toggleSidebar }) => {
   const [user, setUser] = useState({});
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const { logout } = useAuth(); 
+  const { notifications, unreadCount, fetchNotifications } = useNotifications();
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
-  function getNotifications() {
-    axios
-      .get(`${API}/api/users/notifications`, { withCredentials: true })
-      .then(res => {
-        const slicedNotifications = res.data.notifications.slice(0, 3);
-        setNotifications(slicedNotifications);
-        setUnreadCount(res.data.notifications.filter(n => !n.isRead).length);
-      })
-      .catch(err => console.log(err));
-  }
-
-  useEffect(() => {
-    getNotifications();
-  }, []);
 
   useEffect(() => {
     axios
@@ -40,24 +24,6 @@ const TopNavBar = ({ toggleSidebar }) => {
       })
       .catch((err) => console.log(err));
   }, []);
-
-  useEffect(() => {
-    socket.emit("join", user.userId);
-
-    function handleNotification(data) {
-      toast.success("You have a new notification!", {
-        duration: 3000,
-      });
-      getNotifications();
-      console.log("Received notification:", data);
-    }
-
-    socket.on("new-notification", handleNotification);
-
-    return () => {
-      socket.off("new-notification", handleNotification);
-    };
-  }, [user.userId]);
 
   const handleLogout = async () => {
     try {
@@ -78,13 +44,7 @@ const TopNavBar = ({ toggleSidebar }) => {
         { withCredentials: true }
       );
 
-      setNotifications(prev =>
-        prev.map(n =>
-          n._id === id ? { ...n, read: true } : n
-        )
-      );
-
-      setUnreadCount(prev => prev - 1);
+      fetchNotifications();
 
       if (bookingId) {
         navigate(`/dashboard/bookingdetails/${bookingId}`);
@@ -97,8 +57,6 @@ const TopNavBar = ({ toggleSidebar }) => {
       console.error(err);
     }
   };
-
-  console.log("Notifications:", notifications);
 
   return (
     <>

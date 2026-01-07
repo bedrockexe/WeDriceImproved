@@ -93,12 +93,12 @@ const Settings = () => {
             Danger Zone
           </h2>
           <div className="space-y-3">
-            <button className="w-full text-left py-3 text-red-600 hover:text-red-700">
+            <Link to="/dashboard/delete-account" className="w-full text-left py-3 text-red-600 hover:text-red-700 cursor-pointer">
               <p className="font-medium">Delete Account</p>
               <p className="text-sm">
                 Permanently delete your account and all data
               </p>
-            </button>
+            </Link>
           </div>
         </div>
       </div>

@@ -81,6 +81,7 @@ router.put('/decline/:id', async (req, res) => {
     }
 
     const booking = await Booking.findById(req.params.id);
+    const transaction = await Payment.findOne({ bookingId: booking.bookingId, status: 'pending' });
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
@@ -96,6 +97,9 @@ router.put('/decline/:id', async (req, res) => {
     booking.declineReason = declineReason;
 
     await booking.save();
+
+    transaction.status = 'refunded';
+    await transaction.save();
 
     await ClientNotifications.create({
       userId: booking.renterId,

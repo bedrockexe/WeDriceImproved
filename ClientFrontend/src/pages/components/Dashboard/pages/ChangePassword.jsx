@@ -158,53 +158,6 @@ const ChangePassword = () => {
     setModalOpen(false);
   };
 
-
-
-
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   if (!validateForm()) {
-  //     toast.error("Please fix the errors before submitting");
-  //     return;
-  //   }
-
-  // setIsSubmitting(true);
-
-  // try {
-  //   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
-  //   console.log(formData);
-
-  //   const res = await axios.put(
-  //     `${API}/api/user/changepassword`,
-  //     {
-  //       currentPassword: formData.currentPassword,
-  //       newPassword: formData.newPassword,
-  //     },
-  //     {
-  //       withCredentials: true,
-  //     }
-  //   );
-
-  //   toast.success(res.data.message || "Password updated successfully!");
-
-  //   setFormData({
-  //     currentPassword: "",
-  //     newPassword: "",
-  //     confirmPassword: "",
-  //   });
-
-  //   setTimeout(() => navigate("/dashboard/settings"), 1500);
-  // } catch (error) {
-  //   toast.error(error.response?.data?.message || "Error updating password");
-  // }
-
-  // setIsSubmitting(false);
-  // };
-
-
-
-
   const togglePasswordVisibility = (field) => {
     setShowPasswords((prev) => ({
       ...prev,

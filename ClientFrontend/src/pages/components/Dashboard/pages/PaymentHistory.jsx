@@ -38,8 +38,6 @@ const PaymentHistory = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  console.log("Payments Data:", payments);
-
   // ✔ FIX: only return AFTER all hooks are defined
   if (userLoading || paymentsLoading) {
     return (
@@ -132,7 +130,7 @@ const PaymentHistory = () => {
       case "completed":
         return "text-green-600 bg-green-100";
       case "refunded":
-        return "text-blue-600 bg-blue-100";
+        return "text-red-600 bg-red-100";
       case "pending":
         return "text-yellow-600 bg-yellow-100";
       default:
@@ -274,7 +272,7 @@ const PaymentHistory = () => {
                       {payment.status.toLowerCase() === "completed" && (
                         <CheckCircleIcon size={14} className="mr-1" />
                       )}
-                      {payment.status}
+                      {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                     </span>
                   </td>
 

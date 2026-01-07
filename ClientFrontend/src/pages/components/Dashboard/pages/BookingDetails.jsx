@@ -274,7 +274,7 @@ const BookingDetails = () => {
                   ? 'Your rental is currently ongoing. Enjoy your ride!'
                   : ''}
                 {booking.status.toLowerCase() === 'declined'
-                  ? 'Unfortunately, your payment was declined. Please contact support for assistance.'
+                  ? <>Unfortunately, your booking was declined. Reason: <b>{currentBooking.declineReason || 'Not specified'}</b>. Please contact support for more information.</>
                   : ''}
                 {booking.status.toLowerCase() === 'completed' &&
                   'This booking has been successfully completed. Thank you for choosing our service.'}

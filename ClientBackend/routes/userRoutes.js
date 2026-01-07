@@ -10,6 +10,7 @@ import AdminNotifications from '../models/AdminNotifications.js';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import { io } from '../index.js';
+import Bookings from '../models/Bookings.js';
 
 const router = express.Router();
 const storage = multer.memoryStorage();
@@ -543,6 +544,48 @@ router.put('/notifications/mark-all-unread', auth, async (req, res) => {
   } catch (error) {
     console.error("Error marking all notifications as unread:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Delete the user soft delete
+router.delete('/me', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { password } = req.body;
+
+    console.log(`Account deletion request for user ID: ${userId}`);
+
+    // 1. Find user
+    const user = await Users.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 2. Confirm password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Incorrect password" });
+    }
+
+    // 3. Check active rentals
+    const activeBooking = await Bookings.findOne({
+      renterId: user.userId,
+      status: { $in: ['pending', 'active', 'ongoing'] }
+    });
+
+    if (activeBooking) {
+      return res.status(400).json({
+        message: "You cannot delete your account while you have active rentals."
+      });
+    }
+
+    // 4. Delete user
+    await Users.findByIdAndDelete(userId);
+
+    res.status(200).json({ message: "Account deleted successfully" });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
   }
 });
     

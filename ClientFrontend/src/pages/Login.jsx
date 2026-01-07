@@ -49,8 +49,6 @@ const Login = () => {
         { withCredentials: true }
       );
 
-      console.log(`Login Request: ${response.data.message}`)
-
       toast.success("Login successful! Welcome back.", { duration: 3000 });
 
       await refetchUser();

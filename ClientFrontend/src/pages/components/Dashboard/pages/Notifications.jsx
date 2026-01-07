@@ -43,7 +43,6 @@ export default function NotificationsPage() {
   };
 
   const markAsRead = async (id) => {
-    console.log("Marking as read:", id);
     try {
       await axios.patch(
       `${API}/api/users/notifications/${id}/read`,

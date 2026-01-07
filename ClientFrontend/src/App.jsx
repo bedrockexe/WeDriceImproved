@@ -29,50 +29,55 @@ import ResetPassword from "./pages/ResetPassword";
 import CancelBooking from "./pages/components/Dashboard/pages/CancelBooking";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/Policy";
+import { NotificationProvider } from "./NotificationWrapper";
 import Test from "./Test";
+import DeleteAccount from "./pages/components/Dashboard/pages/DeleteAccount";
 
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen">
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/test" element={<Test />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/terms-of-service" element={<TermsOfService />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="car/:id" element={<CarDetails />} />
-            <Route path="verify-identity" element={<VerifyIdentity />} />
-            <Route path="book-car" element={<BookCar />} />
-            <Route path="profile" element={<ViewProfile />} />
-            <Route path="edit-account" element={<EditAccount />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="bookings" element={<MyBookings />} />
-            <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="bookingdetails/:bookingId" element={<BookingDetails />} />
-            <Route path="bookings/:bookingId/cancel" element={<CancelBooking />} />
-            <Route path="bookingdetails/modify/:bookingId" element={<ModifyBooking />} />
-            <Route path="cars" element={<AvailableCars />} />
-            <Route path="payments" element={<PaymentHistory />} />
-            <Route path="support" element={<Support />} />
-            <Route path="change-password" element={<ChangePassword />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <NotificationProvider>
+      <BrowserRouter>
+        <div className="min-h-screen">
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/test" element={<Test />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="car/:id" element={<CarDetails />} />
+              <Route path="verify-identity" element={<VerifyIdentity />} />
+              <Route path="book-car" element={<BookCar />} />
+              <Route path="profile" element={<ViewProfile />} />
+              <Route path="edit-account" element={<EditAccount />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="delete-account" element={<DeleteAccount />} />
+              <Route path="bookings" element={<MyBookings />} />
+              <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="bookingdetails/:bookingId" element={<BookingDetails />} />
+              <Route path="bookings/:bookingId/cancel" element={<CancelBooking />} />
+              <Route path="bookingdetails/modify/:bookingId" element={<ModifyBooking />} />
+              <Route path="cars" element={<AvailableCars />} />
+              <Route path="payments" element={<PaymentHistory />} />
+              <Route path="support" element={<Support />} />
+              <Route path="change-password" element={<ChangePassword />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </NotificationProvider>
   );
 }

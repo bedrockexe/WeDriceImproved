@@ -178,8 +178,6 @@ const MyBookings = () => {
       </div>
     );
   }
-  console.log("Bookings:", bookings);
-  console.log("Cars:", cars);
 
   const merged = bookings.map((b) => {
     const car = cars.find((c) => c.carId === b.carId);

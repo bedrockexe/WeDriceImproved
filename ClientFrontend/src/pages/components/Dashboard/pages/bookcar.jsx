@@ -19,6 +19,7 @@ import {ConfirmationModal} from "../components/UI/ConfirmationModal"
 import { useQuery } from '@tanstack/react-query';
 import { toast, Toaster } from 'sonner'
 import DatePicker from 'react-datepicker';
+import { useNotifications } from "../../../../NotificationWrapper";
 
 
 const BookCar = () => {
@@ -31,6 +32,7 @@ const BookCar = () => {
   const [isVerified, setIsVerified] = useState(false)
   const [user, setUser] = useState(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const { fetchNotifications } = useNotifications();
 
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -252,10 +254,14 @@ const BookCar = () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       queryClient.invalidateQueries({ queryKey: ["currentuser"] });
       queryClient.invalidateQueries({ queryKey: ["payments"] });
-      window.location.reload();
+
+      fetchNotifications();
+
       setTimeout(() => {
         toast.success("Booking successful!", { duration: 4000 });
       }, 2000);
+
+
     } catch (err) {
       console.log(err);
       alert("Booking failed.");
@@ -298,7 +304,6 @@ const BookCar = () => {
 
   return (
     <>
-    <Toaster richColors />
     <div>
       {/* HEADER */}
       <div className="flex items-center mb-6">
