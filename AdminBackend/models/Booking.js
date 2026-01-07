@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const BookingSchema = new mongoose.Schema({
-    bookingId: { type: String, required: true, unique: true },
+    bookingId: { type: String, unique: true },
     renterId: { type: String, required: true },
     carId: { type: String, required: true },
     carName: { type: String, required: true },
@@ -11,7 +11,7 @@ const BookingSchema = new mongoose.Schema({
     pickupLocation: { type: String, required: true },
     returnLocation: { type: String, required: true },
     totalPrice: { type: Number, required: true },
-    status: { type: String, enum: ['pending', 'approved', 'declined', 'completed', 'canceled', 'ongoing'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'approved', 'declined', 'completed', 'cancelled', 'ongoing'], default: 'pending' },
     declineReason: { type: String },
     modifiedCount: { type: Number, default: 0 },
     history: [
@@ -22,6 +22,9 @@ const BookingSchema = new mongoose.Schema({
         }
     ],
     transactions: [String],
+    cancelledAt: { type: Date },
+    cancellationReason: { type: String },
+    refundedAmount: { type: Number },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });

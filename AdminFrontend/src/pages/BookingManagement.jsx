@@ -68,9 +68,9 @@ const AdminBookingManagement = () => {
             bookingid: currentBooking._id,
             id: currentBooking.bookingId,
             userId: renter.userId,
-            userName: `${renter.firstName} ${renter.lastName}`,
+            userName: renter.userName,
             userEmail: renter.email,
-            userPhone: renter.phoneNumber,
+            userPhone: renter.phone,
             carName: car.name,
             carImage: car.mainImage,
             carId: car.carId,
@@ -82,7 +82,7 @@ const AdminBookingManagement = () => {
             returnLocation: currentBooking.returnLocation,
             rentalDays,
             pricePerDay: car.pricePerDay,
-            insurance: "FREE",
+            insurance: "Free",
             reservationFee: 500,
             totalPrice: currentBooking.totalPrice,
             paymentMethod: payment.paymentMethod,
@@ -91,6 +91,9 @@ const AdminBookingManagement = () => {
             submittedDate: currentBooking.createdAt,
             status: currentBooking.status,
             history: currentBooking.history.length,
+            declineReason: currentBooking.declineReason || '',
+            cancellationReason: currentBooking.cancellationReason || '',
+            refundAmount: currentBooking.refundedAmount || 0,
           };
         })
       );
@@ -150,7 +153,7 @@ const AdminBookingManagement = () => {
     },
     cancelled: {
       label: 'Cancelled',
-      color: 'bg-gray-100 text-gray-800 border-gray-200',
+      color: 'bg-red-100 text-red-800 border-red-200',
     },
   }
 
@@ -660,6 +663,43 @@ const AdminBookingManagement = () => {
                       )}
                     </div>
                   </div>
+                  {/* Decline / Cancellation Details */}
+                  {(selectedBooking.status === "declined" ||
+                    selectedBooking.status === "cancelled") && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-5 mt-6">
+                      <h3 className="text-lg font-semibold text-red-700 mb-4 flex items-center">
+                        <AlertCircleIcon size={20} className="mr-2" />
+                        {selectedBooking.status === "declined"
+                          ? "Decline Details"
+                          : "Cancellation Details"}
+                      </h3>
+
+                      {/* Reason */}
+                      <div className="mb-4">
+                        <p className="text-xs text-red-600 mb-1">Reason</p>
+                        <p className="text-sm text-gray-800 whitespace-pre-line">
+                          {selectedBooking.status === "declined"
+                            ? selectedBooking.declineReason
+                            : selectedBooking.cancellationReason}
+                        </p>
+                      </div>
+
+                      {/* Refund */}
+                      <div className="border-t border-red-200 pt-4">
+                        <p className="text-xs text-red-600 mb-1">Refund Amount</p>
+                        <p className="text-lg font-bold text-red-700">
+                          ₱{selectedBooking.refundAmount}
+                        </p>
+
+                        {selectedBooking.refundAmount === 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            No refund was issued for this booking
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>

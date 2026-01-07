@@ -23,6 +23,9 @@ const BookingSchema = new mongoose.Schema({
         }
     ],
     transactions: [String],
+    cancelledAt: { type: Date },
+    cancellationReason: { type: String },
+    refundedAmount: { type: Number },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });

@@ -12,32 +12,35 @@ export const NotificationPanel = ({ isOpen, onClose }) => {
     const [notifications, setNotifications] = useState([]);
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            console.log("Fetching notifications...");
-            try {
-                const response = await axios.get(`${API}/api/admin/notifications`, { withCredentials: true });
-                setNotifications(response.data.notifications.slice(0, 3));
-            } catch (error) {
-                console.error("Error fetching notifications:", error);
-            }
-        };
-        fetchNotifications();
-    }, []);
 
-    const handleNotificationClick = async (id) => {
-      onClose();
-      if (bookingId) {
-        searchParams.delete("bookingId");
-        navigate(`/dashboard/bookings?bookingId=${id}`); 
-        await axios.put(`${API}/api/admin/notifications/mark-read/${id}`, {}, { withCredentials: true });
-        window.location.reload();
-      } else if (userId) {
-        searchParams.delete("userId");
-        navigate(`/dashboard/customers?userId=${id}`); 
-        await axios.put(`${API}/api/admin/notifications/mark-read/${id}`, {}, { withCredentials: true });
-        window.location.reload();
+    const fetchNotifications = async () => {
+      try {
+        const response = await axios.get(
+          `${API}/api/admin/notifications`,
+          { withCredentials: true }
+        );
+        setNotifications(response.data.notifications.slice(0, 3));
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
       }
+    };
+
+    useEffect(() => {
+      fetchNotifications();
+    }, [API]);
+
+    const handleNotificationClick = async (notif) => {
+      onClose();
+      const type = notif.type;
+      const id = type === "booking" ? notif.bookingId : notif.userId;
+      if (!id) return;
+      if (type === "booking") {
+        navigate(`/dashboard/bookings?bookingId=${id}`);
+      } else if (type === "verification") {
+        navigate(`/dashboard/customers?userId=${id}`);
+      }
+      window.location.reload();
+      await axios.put(`${API}/api/admin/notifications/mark-read/${notif.id}`, {}, { withCredentials: true });
     };
 
     console.log("Notifications:", notifications);
@@ -78,9 +81,9 @@ export const NotificationPanel = ({ isOpen, onClose }) => {
               {notifications.map((notif) => (
                 <div
                   key={notif.id}
-                  onClick={() => handleNotificationClick(notif.id)}
+                  onClick={() => handleNotificationClick(notif)}
                   className={`px-4 py-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 ${
-                    notif.unread ? "bg-emerald-50" : ""
+                    !notif.isRead ? "bg-emerald-50" : ""
                   }`}
                 >
                   <p className="text-sm font-medium text-gray-900">

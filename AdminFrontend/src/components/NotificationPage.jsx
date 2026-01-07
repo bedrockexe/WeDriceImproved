@@ -30,34 +30,43 @@ export default function NotificationsPage() {
     fetchNotifications();
   }, []);
 
-  const handleNotificationClick = async (link) => {
-    searchParams.delete("bookingId");
-    navigate(`/dashboard/bookings?bookingId=${link}`);
-    await axios.put(`${API}/api/admin/notifications/mark-read/${link}`, {}, { withCredentials: true });
+  console.log("Notifications:", notifications);
+
+  const handleNotificationClick = async (notif) => {
+    const type = notif.type;
+    const id = type === "booking" ? notif.bookingId : notif.userId;
+    if (!id) return;
+    if (type === "booking") {
+      navigate(`/dashboard/bookings?bookingId=${id}`);
+    } else if (type === "verification") {
+      navigate(`/dashboard/customers?userId=${id}`);
+    }
     window.location.reload();
+    await axios.put(`${API}/api/admin/notifications/mark-read/${notif.id}`, {}, { withCredentials: true });
   };
 
   // Delete modal
-  const confirmDelete = (notif) => {
-    setSelectedNotif(notif);
+  const confirmDelete = (notifId) => {
+    setSelectedNotif(notifId);
     setShowDeleteModal(true);
   };
 
   const handleDelete = async () => {
     if (!selectedNotif) return;
-    await axios.patch(`${API}/api/admin/notifications/delete/${selectedNotif.bookingId}`, {}, { withCredentials: true });
-    setNotifications((prevNotifs) => prevNotifs.filter((notif) => notif.bookingId !== selectedNotif.bookingId));
+    await axios.patch(`${API}/api/admin/notifications/delete/${selectedNotif}`, {}, { withCredentials: true });
+    setNotifications((prevNotifs) => prevNotifs.filter((notif) => notif.id !== selectedNotif));
     setShowDeleteModal(false);
     setSelectedNotif(null);
   };
 
   // Mark all as read modal
   const confirmMarkAll = () => setShowMarkAllModal(true);
+
   const handleMarkAllAsRead = async () => {
     setProcessingAll(true);
     try {
       await axios.put(`${API}/api/admin/notifications/mark-all-read`, {}, { withCredentials: true });
-      setNotifications((prev) => prev.map((notif) => ({ ...notif, unread: false })));
+      setNotifications((prev) => prev.map((notif) => ({ ...notif, isRead: true })));
     } catch (error) {
       console.error("Error marking all as read:", error);
     }
@@ -71,7 +80,7 @@ export default function NotificationsPage() {
     setProcessingAll(true);
     try {
       await axios.put(`${API}/api/admin/notifications/mark-all-unread`, {}, { withCredentials: true });
-      setNotifications((prev) => prev.map((notif) => ({ ...notif, unread: true })));
+      setNotifications((prev) => prev.map((notif) => ({ ...notif, isRead: false })));
     } catch (error) {
       console.error("Error marking all as unread:", error);
     }
@@ -91,9 +100,9 @@ export default function NotificationsPage() {
         <div className="flex gap-3">
           <button
             onClick={confirmMarkAll}
-            disabled={notifications.every((notif) => !notif.unread)}
+            disabled={notifications.every((notif) => notif.isRead)}
             className={`flex items-center gap-2 text-sm text-emerald-600 hover:underline ${
-              notifications.every((notif) => !notif.unread) ? "opacity-50 cursor-not-allowed" : ""
+              notifications.every((notif) => notif.isRead) ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
             <CheckCircle className="w-4 h-4" />
@@ -102,9 +111,9 @@ export default function NotificationsPage() {
 
           <button
             onClick={confirmMarkAllUnread}
-            disabled={notifications.every((notif) => notif.unread)}
+            disabled={notifications.every((notif) => !notif.isRead)}
             className={`flex items-center gap-2 text-sm text-emerald-600 hover:underline ${
-              notifications.every((notif) => notif.unread) ? "opacity-50 cursor-not-allowed" : ""
+              notifications.every((notif) => !notif.isRead) ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
             <CheckCircle className="w-4 h-4" />
@@ -120,21 +129,21 @@ export default function NotificationsPage() {
         ) : (
           notifications.map((notif) => (
             <motion.div
-              key={notif.bookingId}
+              key={notif.id}
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.15 }}
               className={`flex items-start justify-between px-5 py-4 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer ${
-                notif.unread ? "bg-emerald-50" : ""
+                !notif.isRead ? "bg-emerald-50" : ""
               }`}
             >
-              <div onClick={() => handleNotificationClick(notif.bookingId)}>
+              <div onClick={() => handleNotificationClick(notif)} className="flex-1">
                 <p className="text-sm font-medium text-gray-900">{notif.title}</p>
                 <p className="text-sm text-gray-600 mt-0.5">{notif.message}</p>
                 <p className="text-xs text-gray-400 mt-1">{notif.timeAgo}</p>
               </div>
 
-              <button className="text-gray-400 hover:text-red-500" onClick={() => confirmDelete(notif)}>
+              <button className="text-gray-400 hover:text-red-500" onClick={() => confirmDelete(notif.id)}>
                 <Trash2 className="w-4 h-4" />
               </button>
             </motion.div>

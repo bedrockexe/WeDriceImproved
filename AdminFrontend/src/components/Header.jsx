@@ -14,6 +14,7 @@ import { useAuth } from "../authentication/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { socket } from "../notification/socket";
+import { toast, Toaster } from "sonner";
 
 
 const getPageTitle = (pathname) => {
@@ -38,30 +39,41 @@ export const Header = ({ onMenuClick, isSidebarOpen }) => {
   const location = useLocation();
   const pageTitle = getPageTitle(location.pathname);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const response = await axios.get(`${API}/api/admin/notifications/unread-count`, {
-          withCredentials: true,
-        });
-        setUnreadCount(response.data.unreadCount);
-      } catch (error) {
-        console.error("Error fetching unread notifications count:", error);
-      }
-    };
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await axios.get(
+        `${API}/api/admin/notifications/unread-count`,
+        { withCredentials: true }
+      );
+      setUnreadCount(response.data.unreadCount);
+    } catch (error) {
+      console.error("Error fetching unread notifications count:", error);
+    }
+  };
 
+  useEffect(() => {
     fetchUnreadCount();
   }, [API]);
 
-  useEffect(() => {
-    socket.on("new-notification", () => {
-      alert("New notification received");
-    });
-  }, []);
+  console.log("Notifications in Header:", notifications);
 
-  console.log("Unread notifications count:", unreadCount);
+  useEffect(() => {
+    const handleNotification = (data) => {
+      toast.success("New notification received", {duration: 4000});
+      console.log("New notification data:", data.userId);
+      fetchUnreadCount();
+      setUnreadCount(unreadCount + 1);
+    };
+
+    socket.on("new-notification", handleNotification);
+
+    return () => {
+      socket.off("new-notification", handleNotification);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -74,6 +86,7 @@ export const Header = ({ onMenuClick, isSidebarOpen }) => {
 
   return (
     <>
+      <Toaster position="top-right" richColors />
       <header className="h-14 sm:h-16 border-b border-border bg-card flex items-center justify-between px-3 sm:px-4 md:px-6 sticky top-0 z-30">
         <div className="flex items-center gap-2 sm:gap-3">
           <Button 
@@ -139,6 +152,7 @@ export const Header = ({ onMenuClick, isSidebarOpen }) => {
       <NotificationPanel
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
+        notifList={notifications}
       />
     </>
   );

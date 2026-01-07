@@ -14,6 +14,7 @@ import {
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../authentication/AuthContext'
+import { Link } from 'react-router-dom'
 
 
 export function LoginForm() {
@@ -83,7 +84,7 @@ export function LoginForm() {
     setStatus('loading')
     setErrors({})
     try {
-      await login({ email, password });
+      await login({ email, password, rememberMe });
       navigate('/dashboard');
       setStatus('success')
     } catch (err) {
@@ -197,12 +198,12 @@ export function LoginForm() {
             >
               Password
             </label>
-            <a
-              href="#"
+            <Link
+              to="/forgot-password"
               className="text-sm font-medium text-emerald-600 hover:text-emerald-500 transition-colors"
             >
               Forgot password?
-            </a>
+            </Link>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

@@ -11,12 +11,15 @@ import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 import AdminVerification from "./pages/UserManagement";
 import { LoginPage } from "./Login/login";
+import { ResetPasswordPage } from "./Login/ForgotPassword";
+import { NewPasswordPage } from "./Login/ResetPassword";
 import AdminFleetManagement from "./pages/CarManagement";
 import BookingManagement from "./pages/BookingManagement";
 import { AuthProvider } from "./authentication/AuthContext";
 import ProtectedRoute from "./routeprotector/RouteProtector";
 import ProfileSettings from "./pages/Profile";
 import NotificationsPage from "./components/NotificationPage";
+import Test from "./Test";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +31,9 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<LoginPage />} />
-            <Route path="/test" element={<AdminFleetManagement />} />
+            <Route path="/forgot-password" element={<ResetPasswordPage />} />
+            <Route path="/reset-password/:token" element={<NewPasswordPage />} />
+            <Route path="/test" element={<Test />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />

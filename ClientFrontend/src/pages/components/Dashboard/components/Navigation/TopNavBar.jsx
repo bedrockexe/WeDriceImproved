@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useAuth } from "@/authentication/AuthContext";
 import { useNavigate } from 'react-router-dom';
 import { socket } from '@/notification/socket';
+import { toast, Toaster } from 'sonner';
 
 const TopNavBar = ({ toggleSidebar }) => {
   const [user, setUser] = useState({});
@@ -16,7 +17,7 @@ const TopNavBar = ({ toggleSidebar }) => {
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-  useEffect(() => {
+  function getNotifications() {
     axios
       .get(`${API}/api/users/notifications`, { withCredentials: true })
       .then(res => {
@@ -25,6 +26,10 @@ const TopNavBar = ({ toggleSidebar }) => {
         setUnreadCount(res.data.notifications.filter(n => !n.isRead).length);
       })
       .catch(err => console.log(err));
+  }
+
+  useEffect(() => {
+    getNotifications();
   }, []);
 
   useEffect(() => {
@@ -39,12 +44,19 @@ const TopNavBar = ({ toggleSidebar }) => {
   useEffect(() => {
     socket.emit("join", user.userId);
 
-    socket.on("new-notification", (data) => {
-      alert("New notification:", data);
+    function handleNotification(data) {
+      toast.success("You have a new notification!", {
+        duration: 3000,
+      });
+      getNotifications();
       console.log("Received notification:", data);
-      setNotifications(prev => [data, ...prev]);
-      setUnreadCount(prev => prev + 1);
-    });
+    }
+
+    socket.on("new-notification", handleNotification);
+
+    return () => {
+      socket.off("new-notification", handleNotification);
+    };
   }, [user.userId]);
 
   const handleLogout = async () => {
@@ -59,6 +71,7 @@ const TopNavBar = ({ toggleSidebar }) => {
 
   const markAsRead = async (id, bookingId=null) => {
     try {
+
       await axios.patch(
         `${API}/api/users/notifications/${id}/read`,
         {},
@@ -77,7 +90,7 @@ const TopNavBar = ({ toggleSidebar }) => {
         navigate(`/dashboard/bookingdetails/${bookingId}`);
         window.location.reload();
       } else {
-        navigate('/dashboard/verify-identity');
+        navigate('/dashboard/profile');
         window.location.reload();
       }
     } catch (err) {
@@ -88,6 +101,8 @@ const TopNavBar = ({ toggleSidebar }) => {
   console.log("Notifications:", notifications);
 
   return (
+    <>
+    <Toaster richColors position="top-right" />
     <header className="bg-white shadow-sm z-10">
       <div className="px-4 md:px-6 py-3 flex items-center justify-between">
         <button className="md:hidden text-gray-600 hover:text-gray-900" onClick={toggleSidebar}>
@@ -225,6 +240,7 @@ const TopNavBar = ({ toggleSidebar }) => {
         </div>
       </div>
     </header>
+    </>
   );
 };
 

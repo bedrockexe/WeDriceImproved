@@ -18,6 +18,8 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
 
   const validateForm = () => {
     const newErrors = {};
@@ -43,7 +45,7 @@ const Login = () => {
     try {
       const response =await axios.post(
         `${API}/api/users/login`,
-        { email: formData.identifier, password: formData.password },
+        { email: formData.identifier, password: formData.password, rememberMe: rememberMe },
         { withCredentials: true }
       );
 
@@ -56,7 +58,6 @@ const Login = () => {
       setTimeout(() => navigate("/dashboard"), 500);
     } catch (err) {
       if (err.response?.status === 401) {
-        // toast.error("Invalid credentials. Please try again.", { duration: 5000 });
         toast.error(err.response.data.message || "Invalid credentials. Please try again.", { duration: 5000 });
       }
     } finally {
@@ -174,9 +175,15 @@ const Login = () => {
               {/* Remember Me */}
               <div className="flex items-center justify-between">
                 <label className="flex items-center">
-                  <input type="checkbox" className="w-4 h-4 text-green-500 border-gray-300 rounded focus:ring-green-500" />
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 text-green-500 border-gray-300 rounded focus:ring-green-500"
+                  />
                   <span className="ml-2 text-sm text-gray-600">Remember me</span>
                 </label>
+
                 <Link to="/forgot-password" className="text-sm text-green-600 hover:text-green-700 font-medium">
                   Forgot password?
                 </Link>
@@ -228,13 +235,13 @@ const Login = () => {
           {/* Footer */}
           <p className="text-center text-sm text-gray-500 mt-6">
             By continuing, you agree to our{" "}
-            <a href="#" className="text-green-600 hover:text-green-700">
+            <Link to="/terms-of-service" className="text-green-600 hover:text-green-700">
               Terms of Service
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a href="#" className="text-green-600 hover:text-green-700">
+            <Link to="/privacy-policy" className="text-green-600 hover:text-green-700">
               Privacy Policy
-            </a>
+            </Link>
           </p>
         </div>
       </div>

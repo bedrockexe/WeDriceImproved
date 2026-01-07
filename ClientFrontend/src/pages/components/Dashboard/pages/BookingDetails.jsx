@@ -217,6 +217,8 @@ const BookingDetails = () => {
         return 'bg-blue-100 text-blue-700 border-blue-200'
       case 'ongoing':
         return 'bg-purple-100 text-purple-700 border-purple-200'
+      case 'cancelled':
+        return 'bg-red-100 text-red-700 border-red-200'
       default:
         return 'bg-gray-100 text-gray-700 border-gray-200'
     }
@@ -233,6 +235,8 @@ const BookingDetails = () => {
         return <CheckCircleIcon size={20} className="text-blue-600" />
       case 'ongoing':
         return <ClockIcon size={20} className="text-purple-600" />
+      case 'cancelled':
+        return <AlertCircleIcon size={20} className="text-red-600" />
       default:
         return <AlertCircleIcon size={20} className="text-gray-600" />
     }
@@ -274,6 +278,8 @@ const BookingDetails = () => {
                   : ''}
                 {booking.status.toLowerCase() === 'completed' &&
                   'This booking has been successfully completed. Thank you for choosing our service.'}
+                {booking.status.toLowerCase() === 'cancelled' &&
+                  'This booking has been cancelled. If you have any questions, please contact support.'}
               </p>
             </div>
           </div>
@@ -439,6 +445,16 @@ const BookingDetails = () => {
                   className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
                 >
                   Modify Booking
+                </button>
+              )}
+              {booking.status.toLowerCase() === 'approved' && startDate > today && (
+                <button
+                  onClick={() =>
+                    navigate(`/dashboard/bookings/${currentBooking._id}/cancel`)
+                  }
+                  className="w-full px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                >
+                  Cancel Booking
                 </button>
               )}
               <button className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">

@@ -53,6 +53,15 @@ function timeAgo(dateString) {
   return past.toLocaleDateString();
 }
 
+router.post('/test', (req, res) => {
+  io.emit("new-notification", {
+    userId: "testuser",
+    message: `New user created: testuser`,
+    bookingId: null,
+    type: "user"
+  });
+}); 
+
 // Get Current User
 router.get('/me', auth, async (req, res) => {
     try {
@@ -71,7 +80,7 @@ router.get('/me', auth, async (req, res) => {
 // Log in User
 router.post('/login', async (req, res) => {
     console.log('User login attempt');
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
     console.log(`Received Login Credentials: Email/Password: ${email} / ${password}`);
 
     try {
@@ -91,13 +100,13 @@ router.post('/login', async (req, res) => {
           return res.status(401).json({ message: "Wrong Email/Username or Password" });
         }
     
-        const token = jwt.sign({ id: userLogin._id }, JWT_SECRET, { expiresIn: "1h" });
+        const token = jwt.sign({ id: userLogin._id }, JWT_SECRET, { expiresIn: rememberMe ? "7d" : "1d" });
     
         res.cookie("token", token, {
           httpOnly: true,
-          secure: false,         // or true if using HTTPS
-          sameSite: "lax",     // or "none" if cross-site
-          maxAge: 1000 * 60 * 60
+          secure: false, 
+          sameSite: "lax", 
+          maxAge: rememberMe ? 1000 * 60 * 60 * 24 * 7 : 1000 * 60 * 60 * 24
         });
     
         res.json({ message: "Logged in!" });
@@ -271,10 +280,10 @@ router.post('/verify', auth, upload.fields([{ name: 'licenseImage', maxCount: 1 
     await user.save();
 
     io.emit("new-notification", {
-        userId: user.userId,
-        message: `New user created: ${user.userId}`,
-        bookingId: null,
-        type: "user"
+      userId: user.userId,
+      message: `New user created: ${user.userId}`,
+      bookingId: null,
+      type: "user"
     });
 
     const adminNotification = new AdminNotifications({
@@ -419,11 +428,13 @@ router.get('/notifications', auth, async (req, res) => {
     console.log("Fetching notifications for user");
     const userId = req.user.id;
     const user = await Users.findById(userId);
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const notifications = await ClientNotifications.find({ userId: userId, isTrashed: false }).sort({ createdAt: -1 });
+    const notifications = await ClientNotifications.find({ userId: user.userId, isTrashed: false }).sort({ createdAt: -1 });
+
     const formattedNotifications = notifications.map(notification => ({
       id: notification._id,
       title: notification.title,
@@ -445,7 +456,7 @@ router.get('/notifications', auth, async (req, res) => {
 router.patch('/notifications/:id/read', auth, async (req, res) => {
   try {
     const notificationId = req.params.id;
-    const userId = req.user.id;
+    const userId = await Users.findById(req.user.id).then(user => user.userId);
 
     const notification = await ClientNotifications.findOne({ _id: notificationId, userId: userId, isTrashed: false });
     if (!notification) {
@@ -465,7 +476,7 @@ router.patch('/notifications/:id/read', auth, async (req, res) => {
 router.patch('/notifications/:id/unread', auth, async (req, res) => {
   try {
     const notificationId = req.params.id;
-    const userId = req.user.id;
+    const userId = await Users.findById(req.user.id).then(user => user.userId);
 
     const notification = await ClientNotifications.findOne({ _id: notificationId, userId: userId, isTrashed: false });
     if (!notification) {
@@ -485,9 +496,10 @@ router.patch('/notifications/:id/unread', auth, async (req, res) => {
 router.patch('/notifications/:id/trash', auth, async (req, res) => {
   try {
     const notificationId = req.params.id;
-    const userId = req.user.id;
+    const userId = await Users.findById(req.user.id).then(user => user.userId);
 
     const notification = await ClientNotifications.findOne({ _id: notificationId, userId: userId });
+
     if (!notification) {
       return res.status(404).json({ message: "Notification not found" });
     }
@@ -504,7 +516,7 @@ router.patch('/notifications/:id/trash', auth, async (req, res) => {
 
 router.put('/notifications/mark-all-read', auth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = await Users.findById(req.user.id).then(user => user.userId);
 
     await ClientNotifications.updateMany(
       { userId: userId, isRead: false },
@@ -520,7 +532,7 @@ router.put('/notifications/mark-all-read', auth, async (req, res) => {
 
 router.put('/notifications/mark-all-unread', auth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = await Users.findById(req.user.id).then(user => user.userId);
 
     await ClientNotifications.updateMany(
       { userId: userId, isRead: true },

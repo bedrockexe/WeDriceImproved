@@ -3,16 +3,45 @@ import User from "../models/User.js";
 import mongoose from "mongoose";
 import deleteFolder from "./deletefolder.js";
 import ClientNotifications from "../models/ClientNotifications.js";
+import { io } from "../server.js";
 
 
 const router = express.Router();
 
+const formatDate = (dateStr) => {
+  const options = { year: 'numeric', month: 'long', day: 'numeric' }
+  return new Date(dateStr).toLocaleDateString("en-us", options)
+}
+
 router.get("/getallusers", async (req, res) => {
   try {
-    const users = await User.find({ verificationStatus: { $ne: "unverified" } }).select("-password");
+    const getusers = await User.find({ verificationStatus: { $ne: "unverified" } }).select("-password");
+
+    const users = getusers.map(user => ({
+      id: user._id,
+      userId: user.userId,
+      userName: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      phone: user.phoneNumber,
+      dateOfBirth: formatDate(user.birthdate),
+      address: user.address,
+      submittedDate: formatDate(user.verificationSubmittedAt),
+      status: user.verificationStatus,
+      documents: {
+        license: user.licenseImage,
+        selfie: user.licenseSelfie,
+      },
+      licenseDetails: {
+        number: user.licenseNumber,
+        expiry: user.licenseExpiry,
+      },
+      rejectionReason: user.rejectionReason || null,
+    }));
+
 
     res.status(200).json({ users });
   } catch (error) {
+    console.log("Get All Users Error:", error);
     res.status(500).json({ message: "Failed to fetch users" });
   }
 });
@@ -27,7 +56,27 @@ router.get("/:id", async (req, res) => {
         user = await User.findOne({ userId: id });
     }
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.status(200).json({ user });
+    const mappedUser = {
+      id: user._id,
+      userId: user.userId,
+      userName: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      phone: user.phoneNumber,
+      dateOfBirth: formatDate(user.birthdate),
+      address: user.address,
+      submittedDate: formatDate(user.verificationSubmittedAt),
+      status: user.verificationStatus,
+      documents: {
+        license: user.licenseImage,
+        selfie: user.licenseSelfie,
+      },
+      licenseDetails: {
+        number: user.licenseNumber,
+        expiry: user.licenseExpiry,
+      },
+      rejectionReason: user.rejectionReason || null,
+    };
+    res.status(200).json({ user: mappedUser });
   } catch (error) {
     console.log("Get User Error:", error);
     res.status(500).json({ message: "Failed to fetch users" });

@@ -6,6 +6,8 @@ import adminAuth from "../middleware/authentication.js";
 import upload from "../config/multer.js";
 import User from "../models/User.js";
 import AdminNotification from "../models/AdminNotifications.js";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
 
 const router = express.Router();
 
@@ -64,7 +66,7 @@ router.get("/me", adminAuth, async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
     const admin = await Admin.findOne({ email, password });
     if (!admin) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -73,14 +75,14 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       { id: admin._id, role: "admin" },
       JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: rememberMe ? "7d" : "1d" }
     );
 
     res.cookie("admin_token", token, {
       httpOnly: true,
       secure: false, //process.env.NODE_ENV === "production",
       sameSite: "lax", //"strict",
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
     });
     res.json({ message: "Login successful", admin });
     } catch (error) {
@@ -97,6 +99,105 @@ router.post("/logout", (req, res) => {
   });
 
   res.json({ message: "Logged out" });
+});
+
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  try {
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const admin = await Admin.findOne({ email });
+    if (!admin) {
+      return res.status(404).json({ message: "Admin with this email does not exist" });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    admin.resetPasswordToken = hashedToken;
+    admin.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+
+    await admin.save();
+
+    const resetUrl = `http://localhost:8080/reset-password/${resetToken}`;
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "joshuabalba@gmail.com",
+        pass: "ghle cwzc ywuh hukc",
+      },
+    });
+
+    await transporter.sendMail({
+      to: admin.email,
+      subject: "Password Reset Request",
+      html: `
+        <h2>Password Reset</h2>
+        <p>You requested to reset your password.</p>
+        <a href="${resetUrl}">Click here to reset your password</a>
+        <p>This link expires in 15 minutes.</p>
+      `,
+    });
+    res.status(200).json({ message: "Password reset email sent" });
+
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+
+});
+
+router.post("/reset-password/:token", async (req, res) => {
+  const { password } = req.body;
+  const { token } = req.params;
+
+  try {
+    if (!password) {
+      return res.status(400).json({
+        message: "Password must be provided",
+      });
+    }
+
+    // Hash token from URL
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+
+    // Find user
+    const admin = await Admin.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!admin) {
+      return res.status(400).json({
+        message: "Invalid or expired reset token",
+      });
+    }
+
+    // Hash new password
+    // const salt = await bcrypt.genSalt(10);
+    // admin.password = await bcrypt.hash(password, salt);
+    admin.password = password;
+
+    // Clear reset fields
+    admin.resetPasswordToken = undefined;
+    admin.resetPasswordExpires = undefined;
+
+    await admin.save();  
+
+    res.json({
+      message: "Password reset successful. You can now login.",
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 router.get("/dashboard", adminAuth, async (req, res) => {

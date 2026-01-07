@@ -122,21 +122,21 @@ const BookCar = () => {
   };
 
   const getPickupMaxDate = () => {
-  if (!disabledRanges.length) return null;
+    if (!disabledRanges.length) return null;
 
-  // Sort ranges
-  const sorted = [...disabledRanges].sort((a, b) => a.start - b.start);
+    // Sort ranges
+    const sorted = [...disabledRanges].sort((a, b) => a.start - b.start);
 
-  // Find the FIRST booked range that is AFTER tomorrow
-  const base = getMinimumAvailableDate();
-  const upcoming = sorted.find(range => range.start > base);
+    // Find the FIRST booked range that is AFTER tomorrow
+    const base = getMinimumAvailableDate();
+    const upcoming = sorted.find(range => range.start > base);
 
-  if (!upcoming) return null;
+    if (!upcoming) return null;
 
-  // Last available date is the day before the next booking starts
-  const max = new Date(upcoming.start);
-  max.setDate(max.getDate() - 1);
-  return max;
+    // Last available date is the day before the next booking starts
+    const max = new Date(upcoming.start);
+    max.setDate(max.getDate() - 1);
+    return max;
   };
 
   const getReturnMinDate = () => {
@@ -147,22 +147,22 @@ const BookCar = () => {
   };
 
   const getReturnMaxDate = () => {
-  if (!bookingData.pickupDate) return null;
+    if (!bookingData.pickupDate) return null;
 
-  const pickup = new Date(bookingData.pickupDate);
+    const pickup = new Date(bookingData.pickupDate);
 
-  // Sort booked ranges
-  const sorted = [...disabledRanges].sort((a, b) => a.start - b.start);
+    // Sort booked ranges
+    const sorted = [...disabledRanges].sort((a, b) => a.start - b.start);
 
-  // Find the first booking that starts AFTER pickup date
-  const nextBooking = sorted.find(range => range.start > pickup);
+    // Find the first booking that starts AFTER pickup date
+    const nextBooking = sorted.find(range => range.start > pickup);
 
-  if (!nextBooking) return null; // no upcoming booking
+    if (!nextBooking) return null; // no upcoming booking
 
-  // Return the day before next booking start
-  const max = new Date(nextBooking.start);
-  max.setDate(max.getDate() - 1);
-  return max;
+    // Return the day before next booking start
+    const max = new Date(nextBooking.start);
+    max.setDate(max.getDate() - 1);
+    return max;
   };
 
   const formatDate = (date) => {
@@ -172,9 +172,6 @@ const BookCar = () => {
     return `${year}-${month}-${day}`;
   };
 
-
-
-  // 🟩 Calculate rental total
   const calculateTotal = () => {
     if (!bookingData.pickupDate || !bookingData.returnDate) return 0
     const days = Math.ceil(
@@ -224,14 +221,12 @@ const BookCar = () => {
 
   const handleBack = () => setCurrentStep(currentStep - 1)
 
-  // 🟩 Submit booking to backend
   const handleSubmit = async () => {
     setShowConfirmModal(true)
   };
 
   const handleConfirmBooking = async () => {
     setSubmitting(true)
-    // Simulate API call
     try {
       const bookingFormData = new FormData();
 
@@ -257,6 +252,10 @@ const BookCar = () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       queryClient.invalidateQueries({ queryKey: ["currentuser"] });
       queryClient.invalidateQueries({ queryKey: ["payments"] });
+      window.location.reload();
+      setTimeout(() => {
+        toast.success("Booking successful!", { duration: 4000 });
+      }, 2000);
     } catch (err) {
       console.log(err);
       alert("Booking failed.");
@@ -647,7 +646,6 @@ const BookCar = () => {
           </div>
         </div>
       )}
-
 
       {/* STEP 2 — Review */}
       {currentStep === 2 && (

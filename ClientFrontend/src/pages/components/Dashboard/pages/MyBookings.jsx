@@ -195,6 +195,7 @@ const MyBookings = () => {
     declined: merged.filter((b) => b.status?.toLowerCase() === "declined"),
     completed: merged.filter((b) => b.status?.toLowerCase() === "completed"),
     ongoing: merged.filter((b) => b.status?.toLowerCase() === "ongoing"),
+    cancelled: merged.filter((b) => b.status?.toLowerCase() === "cancelled"),
   };
 
 
@@ -212,6 +213,8 @@ const MyBookings = () => {
         return "bg-red-100 text-red-700";
       case "ongoing":
         return "bg-purple-100 text-purple-700";
+      case "cancelled":
+        return "bg-red-100 text-red-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -235,7 +238,7 @@ const MyBookings = () => {
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 mb-6">
         <div className="flex border-b border-gray-200">
-          {["approved", "pending", "completed", "declined", "ongoing"].map((tab) => (
+          {["approved", "pending", "completed", "declined", "ongoing", "cancelled"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}

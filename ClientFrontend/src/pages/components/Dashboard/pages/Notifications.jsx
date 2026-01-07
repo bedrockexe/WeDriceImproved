@@ -13,6 +13,10 @@ import { useSearchParams } from 'react-router-dom';
 
 export default function NotificationsPage() {
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const [confirmActionOpen, setConfirmActionOpen] = useState(false);
+  const [actionType, setActionType] = useState(null); // "read" | "unread"
+  const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState(null); // "read" | "unread"
 
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +79,7 @@ export default function NotificationsPage() {
       navigate(`/dashboard/bookingdetails/${bookingId}`);
       window.location.reload();
     } else {
-      navigate('/dashboard/verify-identity');
+      navigate('/dashboard/profile');
       window.location.reload();
     }
 
@@ -124,7 +128,6 @@ export default function NotificationsPage() {
     );
   };
 
-
   const deleteNotification = async (id) => {
     await axios.patch(`${API}/api/users/notifications/${id}/trash`, {
       withCredentials: true
@@ -134,6 +137,38 @@ export default function NotificationsPage() {
       prev.filter(n => n.id !== id)
     );
   };
+
+  const confirmMarkAction = async () => {
+    if (!selectedNotifId || !actionType) return;
+
+    if (actionType === "read") {
+      await markAsRead(selectedNotifId);
+    }
+
+    if (actionType === "unread") {
+      await markAsUnread(selectedNotifId);
+    }
+
+    setConfirmActionOpen(false);
+    setSelectedNotifId(null);
+    setActionType(null);
+  };
+
+  const confirmBulkAction = async () => {
+    if (!bulkAction) return;
+
+    if (bulkAction === "read") {
+      await markAllAsRead();
+    }
+
+    if (bulkAction === "unread") {
+      await markAllAsUnread();
+    }
+
+    setConfirmBulkOpen(false);
+    setBulkAction(null);
+  };
+
 
   const timeAgo = (date) => {
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
@@ -172,8 +207,11 @@ export default function NotificationsPage() {
         <div className="flex gap-4">
           {notifications.some(n => n.isRead) && (
             <button
-              onClick={markAllAsUnread}
-              className="text-sm text-gray-500 hover:underline"
+              onClick={() => {
+                setBulkAction("unread");
+                setConfirmBulkOpen(true);
+              }}
+              className="text-sm text-gray-500 hover:underline cursor-pointer"
             >
               Mark all as unread
             </button>
@@ -181,8 +219,11 @@ export default function NotificationsPage() {
 
           {notifications.some(n => !n.isRead) && (
             <button
-              onClick={markAllAsRead}
-              className="text-sm text-green-600 hover:underline"
+              onClick={() => {
+                setBulkAction("read");
+                setConfirmBulkOpen(true);
+              }}
+              className="text-sm text-green-600 hover:underline cursor-pointer"
             >
               Mark all as read
             </button>
@@ -211,7 +252,7 @@ export default function NotificationsPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: 50 }}
-              className={`flex justify-between items-start p-4 ${
+              className={`flex justify-between items-start p-4 border-gray-200 ${
                 !notif.isRead ? "bg-green-50" : ""
               }`}
             >
@@ -231,20 +272,29 @@ export default function NotificationsPage() {
               <div className="flex items-center gap-2 ml-4">
                 {!notif.isRead ? (
                   <button
-                    onClick={() => markAsRead(notif.id)}
-                    className="text-green-600 hover:text-green-800"
+                    onClick={() => {
+                      setSelectedNotifId(notif.id);
+                      setActionType("read");
+                      setConfirmActionOpen(true);
+                    }}
+                    className="text-green-600 hover:text-green-800 cursor-pointer"
                     title="Mark as read"
                   >
                     <CheckCircle size={18} />
                   </button>
                 ) : (
                   <button
-                    onClick={() => markAsUnread(notif.id)}
+                    onClick={() => {
+                      setSelectedNotifId(notif.id);
+                      setActionType("unread");
+                      setConfirmActionOpen(true);
+                    }}
                     className="text-gray-500 hover:text-gray-700 cursor-pointer"
                     title="Mark as unread"
                   >
                     <Bell size={18} />
                   </button>
+
                 )}
 
                 <button
@@ -252,7 +302,7 @@ export default function NotificationsPage() {
                     setSelectedNotifId(notif.id);
                     setConfirmOpen(true);
                   }}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 hover:text-red-700 cursor-pointer"
                   title="Delete"
                 >
                   <Trash2 size={18} />
@@ -263,48 +313,144 @@ export default function NotificationsPage() {
           ))}
         </AnimatePresence>
         <AnimatePresence>
-    {confirmOpen && (
-        <motion.div
-        className="fixed inset-0 bg-black/20 transition-opacity flex items-center justify-center z-50"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        >
-        <motion.div
-            className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-        >
-            <h2 className="text-lg font-semibold mb-2">
-            Delete Notification
-            </h2>
-
-            <p className="text-sm text-gray-600 mb-6">
-            Are you sure you want to delete this notification?
-            This action cannot be undone.
-            </p>
-
-            <div className="flex justify-end gap-3">
-            <button
-                onClick={() => setConfirmOpen(false)}
-                className="px-4 py-2 text-sm rounded-md border hover:bg-gray-100"
+        {confirmOpen && (
+            <motion.div
+            className="fixed inset-0 bg-black/20 transition-opacity flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             >
-                Cancel
-            </button>
-
-            <button
-                onClick={confirmDelete}
-                className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700"
+            <motion.div
+                className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
             >
-                Delete
-            </button>
-            </div>
-        </motion.div>
-        </motion.div>
-    )}
-    </AnimatePresence>
+                <h2 className="text-lg font-semibold mb-2">
+                Delete Notification
+                </h2>
 
+                <p className="text-sm text-gray-600 mb-6">
+                Are you sure you want to delete this notification?
+                This action cannot be undone.
+                </p>
+
+                <div className="flex justify-end gap-3">
+                  <button
+                      onClick={() => setConfirmOpen(false)}
+                      className="px-4 py-2 text-sm rounded-md border hover:bg-gray-100 border-gray-300 cursor-pointer"
+                  >
+                      Cancel
+                  </button>
+                  <button
+                      onClick={confirmDelete}
+                      className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                  >
+                      Delete
+                  </button>
+                </div>
+            </motion.div>
+            </motion.div>
+        )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {confirmActionOpen && (
+            <motion.div
+              className="fixed inset-0 bg-black/20 flex items-center justify-center z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+              >
+                <h2 className="text-lg font-semibold mb-2">
+                  {actionType === "read"
+                    ? "Mark notification as read?"
+                    : "Mark notification as unread?"}
+                </h2>
+
+                <p className="text-sm text-gray-600 mb-6">
+                  {actionType === "read"
+                    ? "This notification will be marked as read."
+                    : "This notification will be marked as unread."}
+                </p>
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setConfirmActionOpen(false)}
+                    className="px-4 py-2 text-sm rounded-md border hover:bg-gray-100 border-gray-300 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    onClick={confirmMarkAction}
+                    className={`px-4 py-2 text-sm rounded-md text-white cursor-pointer ${
+                      actionType === "read"
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-gray-600 hover:bg-gray-700"
+                    }`}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {confirmBulkOpen && (
+            <motion.div
+              className="fixed inset-0 bg-black/20 flex items-center justify-center z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+              >
+                <h2 className="text-lg font-semibold mb-2">
+                  {bulkAction === "read"
+                    ? "Mark all notifications as read?"
+                    : "Mark all notifications as unread?"}
+                </h2>
+
+                <p className="text-sm text-gray-600 mb-6">
+                  {bulkAction === "read"
+                    ? "All notifications will be marked as read."
+                    : "All notifications will be marked as unread."}
+                </p>
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setConfirmBulkOpen(false)}
+                    className="px-4 py-2 text-sm rounded-md border hover:bg-gray-100 border-gray-300 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    onClick={confirmBulkAction}
+                    className={`px-4 py-2 text-sm rounded-md text-white ${
+                      bulkAction === "read"
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-gray-600 hover:bg-gray-700"
+                    }`}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

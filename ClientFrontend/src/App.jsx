@@ -23,10 +23,14 @@ import ChangePassword from "./pages/components/Dashboard/pages/ChangePassword";
 import BookingDetails from "./pages/components/Dashboard/pages/BookingDetails";
 import ModifyBooking from "./pages/components/Dashboard/pages/ModifyBooking";
 import NotFound from "./pages/components/Dashboard/pages/NotFound";
-import Test from "./pages/components/Dashboard/pages/test";
 import NotificationsPage from "./pages/components/Dashboard/pages/Notifications";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import CancelBooking from "./pages/components/Dashboard/pages/CancelBooking";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/Policy";
+import Test from "./Test";
+
 
 export default function App() {
   return (
@@ -34,10 +38,13 @@ export default function App() {
       <div className="min-h-screen">
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/test" element={<Test />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route
             path="/dashboard"
             element={
@@ -56,6 +63,7 @@ export default function App() {
             <Route path="bookings" element={<MyBookings />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="bookingdetails/:bookingId" element={<BookingDetails />} />
+            <Route path="bookings/:bookingId/cancel" element={<CancelBooking />} />
             <Route path="bookingdetails/modify/:bookingId" element={<ModifyBooking />} />
             <Route path="cars" element={<AvailableCars />} />
             <Route path="payments" element={<PaymentHistory />} />

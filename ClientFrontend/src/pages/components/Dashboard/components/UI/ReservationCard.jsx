@@ -67,10 +67,6 @@ const ReservationCard = ({
             >
               View Details
             </Link>
-
-            <button className="text-sm text-red-500 hover:text-red-600">
-              Cancel
-            </button>
           </div>
         </div>
       </div>

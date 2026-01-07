@@ -18,6 +18,8 @@ import {
 import { ConfirmationModal } from './ConfirmationModal'
 import { toast, Toaster } from 'sonner'
 import axios from 'axios'
+import { useSearchParams } from 'react-router-dom'
+
 
 const formatDate = (dateStr) => {
   const options = { year: 'numeric', month: 'long', day: 'numeric' }
@@ -35,51 +37,68 @@ const AdminVerification = () => {
   const [rejectionReason, setRejectionReason] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [imagePreview, setImagePreview] = useState(null)
-  const [users, setUsers] = useState([])
+  const [searchParams] = useSearchParams()
+  const [loadError, setLoadError] = useState(null)
+
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        setLoadError(null)
+
         const response = await axios.get(
-          `${API}/api/users/getallusers`, {withCredentials: true}
+          `${API}/api/users/getallusers`,
+          { withCredentials: true }
         )
-        const mappedrequests = response.data.users.map((user) => ({
-          id: user._id,
-          userId: user.userId,
-          userName: `${user.firstName} ${user.lastName}`,
-          email: user.email,
-          phone: user.phoneNumber || 'N/A',
-          dateOfBirth: formatDate(user.birthdate) || 'N/A',
-          address: user.address || 'N/A',
-          submittedDate: formatDate(user.verificationSubmittedAt) || 'N/A',
-          status: user.verificationStatus,
-          documents: {
-            license: user.licenseImage,
-            selfie: user.licenseSelfie,
-          },
-          licenseDetails: {
-            number: user.licenseNumber || 'N/A',
-            expiryDate: user.licenseExpiry || 'N/A', 
-          },
-          rejectionReason: user.rejectionReason || '',
-        }));
-        setRequests(mappedrequests)
+
+        const users = response.data.users
+        setRequests(users)
+
+        // ✅ READ SEARCH PARAM
+        const userIdFromQuery = searchParams.get("userId")
+
+        if (userIdFromQuery) {
+          const matchedUser = users.find(
+            (u) =>
+              u.id === userIdFromQuery ||
+              u.userId === userIdFromQuery ||
+              u._id === userIdFromQuery
+          )
+
+          if (matchedUser) {
+            setSelectedRequest(matchedUser)
+          } else {
+            setLoadError("User verification request not found.")
+            toast.error("User verification request not found.")
+          }
+        }
+
       } catch (error) {
-        console.error('Error fetching users:', error)
+        console.error("Error fetching users:", error)
+        setLoadError("Failed to load verification requests.")
+        toast.error("Failed to load verification requests.")
       }
     }
+
     fetchUsers()
-  }, [])
+  }, [searchParams])
+
+  console.log('All Requests:', requests)
+
 
 
   const filteredRequests = requests.filter((req) => {
-    const matchesStatus = filterStatus === 'all' || req.status === filterStatus
+    const matchesStatus =
+      filterStatus === 'all' || req.status === filterStatus
+
     const matchesSearch =
-      req.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.id.toLowerCase().includes(searchQuery.toLowerCase())
+      (req.userName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (req.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (req.id || "").toLowerCase().includes(searchQuery.toLowerCase())
+
     return matchesStatus && matchesSearch
   })
+
 
   const handleApprove = async () => {
     if (!selectedRequest) return
@@ -268,6 +287,16 @@ const AdminVerification = () => {
         </div>
       </div>
 
+      {loadError && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center text-red-700">
+            <AlertCircleIcon size={18} className="mr-2" />
+            <p className="text-sm">{loadError}</p>
+          </div>
+        </div>
+      )}
+
+
       {/* Verification Requests List */}
       {selectedRequest ? (
         // Detailed View
@@ -364,7 +393,7 @@ const AdminVerification = () => {
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Expiry Date</p>
                     <p className="font-medium text-gray-800">
-                      {selectedRequest.licenseDetails.expiryDate}
+                      {selectedRequest.licenseDetails.expiry}
                     </p>
                   </div>
                 </div>

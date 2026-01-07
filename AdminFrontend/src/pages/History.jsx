@@ -48,7 +48,7 @@ export default function History() {
               id: payment.transactionId,
               bookingId: payment.bookingId,
               transactionType: payment.transactionType,
-              customer: `${renter.firstName} ${renter.lastName}`,
+              customer: renter.userName,
               vehicle: `${car.name} - ${car.year}`,
               amount: `PHP ${payment.totalAmount}`,
               paymentStatus: payment.status,
@@ -107,10 +107,16 @@ export default function History() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-1">Total Rentals</p>
           <p className="text-2xl font-bold">{historyData.length}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground mb-1">Pending</p>
+          <p className="text-2xl font-bold text-stat-orange">
+            {historyData.filter((r) => r.paymentStatus.toLowerCase() === "pending").length}
+          </p>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-1">Completed</p>
@@ -119,9 +125,9 @@ export default function History() {
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-muted-foreground mb-1">Pending</p>
-          <p className="text-2xl font-bold text-stat-orange">
-            {historyData.filter((r) => r.paymentStatus.toLowerCase() === "pending").length}
+          <p className="text-sm text-muted-foreground mb-1">Refunded</p>
+          <p className="text-2xl font-bold text-stat-red">
+            {historyData.filter((r) => r.paymentStatus.toLowerCase() === "refunded").length}
           </p>
         </Card>
       </div>
@@ -199,7 +205,7 @@ export default function History() {
                         className="flex items-center text-green-600 hover:text-green-700 font-medium text-sm"
                       >
                         <FileTextIcon size={16} className="mr-1" />
-                          Download Proof
+                          View Proof
                         <DownloadIcon size={14} className="ml-1" />
                       </a></TableCell>
                   </TableRow>

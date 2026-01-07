@@ -109,17 +109,9 @@ router.post('/create', auth, upload.array("proofOfPayment", 1), async (req, res)
             type: "booking"
         });
 
-        const newNotification = new Notifications({
-            title: "New Booking Created",
-            message: `Your booking ${newBooking.bookingId} has been created successfully.`,
-            userId: req.user.id,
-            bookingId: newBooking.bookingId
-        });
-
-        await newNotification.save();
-
         const clientNotification = new ClientNotifications({
             userId: user.userId,
+            title: "Booking Created",
             message: `Your booking ${newBooking.bookingId} has been created successfully.`,
             bookingId: newBooking.bookingId,
             type: "booking"
@@ -129,6 +121,7 @@ router.post('/create', auth, upload.array("proofOfPayment", 1), async (req, res)
 
         const adminNotification = new AdminNotifications({
             userId: user.userId,
+            title: "New Booking Created",
             message: `New booking ${newBooking.bookingId} created by user ${user.userId}.`,
             bookingId: newBooking.bookingId,
             type: "booking"
@@ -206,11 +199,16 @@ router.get('/user/me', auth, async (req, res) => {
     }
 });
 
-// Get all bookings of a car
+// Get all bookings of a car (approved, pending, ongoing only)
 router.get('/car/:carId', auth, async (req, res) => {
     const { carId } = req.params;
+
     try {
-        const bookings = await Bookings.find({ carId: carId }).sort({ createdAt: -1 });
+        const bookings = await Bookings.find({
+            carId: carId,
+            status: { $in: ["approved", "pending", "ongoing"] }
+        }).sort({ createdAt: -1 });
+
         res.status(200).json({ bookings });
     } catch (error) {
         console.error("Error fetching bookings for car:", error);
@@ -220,21 +218,16 @@ router.get('/car/:carId', auth, async (req, res) => {
 
 // Get all the bookings of a car other than the one being modified
 router.get('/car/:carId/exclude/:bookingId', auth, async (req, res) => {
-    console.log("Fetching bookings for car excluding booking ID:", req.params.bookingId);
-    console.log("Car ID:", req.params.carId);
     const { carId, bookingId } = req.params;
+
     try {
-        const bookings = await Bookings.find({ 
+        const bookings = await Bookings.find({
             carId: carId,
-            bookingId: { $ne: bookingId }
+            bookingId: { $ne: bookingId },
+            status: { $in: ["approved", "pending", "ongoing"] }
         }).sort({ createdAt: -1 });
 
-        if (!bookings) {
-            return res.status(404).json({ message: "No bookings found for this car" });
-        }
-
-        if (bookings.length === 0) {
-            console.log("No other bookings found for this car.");
+        if (!bookings || bookings.length === 0) {
             return res.status(200).json({ bookings: [] });
         }
 
@@ -407,5 +400,111 @@ router.put('/modify/:bookingId', auth, upload.array("proofOfPayment", 1), async 
         res.status(500).json({ message: "Server error" });
     }
 });
+
+// Cancel a booking
+router.put("/:id/cancel", auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const userId = await Users.findById(req.user.id).then(user => user.userId);
+    const booking = await Bookings.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Ownership check
+    if (booking.renterId !== userId) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    // Status validation
+    if (["cancelled", "completed"].includes(booking.status)) {
+      return res.status(400).json({
+        message: `Cannot cancel a ${booking.status.toLowerCase()} booking`
+      });
+    }
+
+    if (booking.status === "ongoing") {
+      return res.status(400).json({
+        message: "Booking already started and cannot be cancelled"
+      });
+    }
+
+    // Refund logic
+    const now = new Date();
+    let refundAmount = 0;
+
+    const hoursBeforePickup =
+      (booking.startDate - now) / (1000 * 60 * 60);
+
+    if (hoursBeforePickup >= 24) {
+      refundAmount = booking.totalPrice;
+    } else if (hoursBeforePickup >= 1) {
+      refundAmount = booking.totalPrice * 0.5;
+    }
+
+    // Update booking
+    booking.status = "cancelled";
+    booking.cancelledAt = now;
+    booking.cancellationReason = reason;
+    booking.refundedAmount = refundAmount;
+
+    await booking.save();
+
+    const transaction = await Transactions.findOne({ bookingId: booking.bookingId });
+    if (transaction) {
+      transaction.status = "refunded";
+      await transaction.save();
+    }
+
+    // Update user totalSpent
+    const user = await Users.findById(req.user.id);
+    user.totalSpent -= refundAmount;
+    await user.save();
+
+    // Notifications
+    const clientNotification = new ClientNotifications({
+      userId: user.userId,
+      title: "Booking Cancelled",
+      message: `Your booking ${booking.bookingId} has been cancelled.`,
+      bookingId: booking.bookingId,
+      type: "booking"
+    });
+
+    await clientNotification.save();
+
+    const adminNotification = new AdminNotifications({
+      userId: user.userId,
+      title: "Booking Cancelled",
+      message: `Booking ${booking.bookingId} cancelled by user ${user.userId}.`,
+      bookingId: booking.bookingId,
+      type: "booking"
+    });
+
+    await adminNotification.save();
+
+    io.emit("new-notification", {
+      userId: user.userId,
+      message: `Booking cancelled: ${booking.bookingId}`,
+      bookingId: booking.bookingId,
+      type: "booking"
+    });
+
+    await adminNotification.save();
+
+    res.status(200).json({
+      message: "Booking cancelled successfully",
+      refundAmount
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Server error while cancelling booking"
+    });
+  }
+});
+
 
 export default router;
