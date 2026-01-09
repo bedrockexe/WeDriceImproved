@@ -176,7 +176,7 @@ const Register = () => {
         { withCredentials: true }
       );
 
-      toast.success('Account created successfully! Redirecting to login...', {
+      toast.success('Account created successfully! Please verify your email before logging in.', {
         duration: 4000,
       })
 

@@ -346,6 +346,12 @@ router.put('/modify/:bookingId', auth, upload.array("proofOfPayment", 1), async 
         const car = await Cars.findOne({ carId: booking.carId });
         const newTotalPrice = (days * car.pricePerDay) + 500;
 
+        if (transaction) {
+            booking.transactions.push(transaction.transactionId);
+        } else {
+            booking.refundedAmount = booking.totalPrice - newTotalPrice;
+        }
+
 
         // Step 7: Update Booking
         booking.startDate = newStart;
@@ -366,10 +372,6 @@ router.put('/modify/:bookingId', auth, upload.array("proofOfPayment", 1), async 
                 totalPrice: newTotalPrice
             }
         });
-
-        if (transaction) {
-            booking.transactions.push(transaction.transactionId);
-        }
 
         await booking.save();
 

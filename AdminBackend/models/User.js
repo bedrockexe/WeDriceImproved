@@ -22,6 +22,9 @@ const UserSchema = new mongoose.Schema(
     totalSpent: { type: Number, default: 0 },
     bookings: [String],
     transactions: [String],
+    isEmailVerified: { type: Boolean, default: false },
+    emailVerificationToken: { type: String },
+    emailVerificationTokenExpires: { type: Date },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true }

@@ -59,11 +59,17 @@ const AdminBookingManagement = () => {
             const carFetch = await axios.get(`${API}/api/cars/${currentBooking.carId}`, { withCredentials: true });
             const car = carFetch.data.car;
 
-            const paymentFetch = await axios.get(`${API}/api/payments/${currentBooking.transactions[currentBooking.modifiedCount]}`, { withCredentials: true });
+            let paymentFetch;
+
+            try {
+              paymentFetch = await axios.get(`${API}/api/payments/${currentBooking.transactions[currentBooking.modifiedCount]}`, { withCredentials: true }); 
+            } catch (error) {
+              paymentFetch = await axios.get(`${API}/api/payments/${currentBooking.transactions[0]}`, { withCredentials: true });
+            }
+
             const payment = paymentFetch.data.payment;
 
-            const rentalDays =
-              (new Date(currentBooking.endDate) - new Date(currentBooking.startDate)) / (1000 * 60 * 60 * 24);
+            const rentalDays = (new Date(currentBooking.endDate) - new Date(currentBooking.startDate)) / (1000 * 60 * 60 * 24);
 
             return {
               bookingid: currentBooking._id,
@@ -263,6 +269,7 @@ const AdminBookingManagement = () => {
   let differenceInDays;
   let differenceInPrice;
   let oldPrice;
+  let isExtending;
 
   if (selectedBooking && selectedBooking.history.length > 0) {
     const lastHistory = selectedBooking.history[selectedBooking.history.length - 1];
@@ -275,6 +282,7 @@ const AdminBookingManagement = () => {
     oldPrice = lastHistory.previous.totalPrice;
     differenceInPrice = Math.abs(lastHistory.previous.totalPrice - lastHistory.updated.totalPrice);
     differenceInDays = Math.abs(Math.abs(newStart - newEnd) - Math.abs(oldStart - oldEnd)) / (1000 * 60 * 60 * 24);
+    isExtending = lastHistory.updated.totalPrice > lastHistory.previous.totalPrice;
   }
 
   return (
@@ -442,7 +450,7 @@ const AdminBookingManagement = () => {
                 </div>
                 <div className='flex items-center space-x-2'>
                   {getStatusBadge(selectedBooking.status)}
-                  {(selectedBooking.history > 0) && (
+                  {(selectedBooking.history.length > 0) && (
                     <span className="px-3 py-1 text-xs font-medium rounded-full
                                     bg-blue-100 text-blue-700 border border-blue-200">
                       Modify Booking
@@ -747,7 +755,56 @@ const AdminBookingManagement = () => {
                         </div>
                       </div>
                     )}
+                  {/* Reduce Booking days Details */}
+                  {(!isExtending && selectedBooking.history.length > 0) && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-5 mt-6">
+                        <h3 className="text-lg font-semibold text-green-700 mb-4 flex items-center">
+                          <AlertCircleIcon size={20} className="mr-2" />
+                          Reduced Booking Duration Details
+                        </h3>
 
+                        {/* Reason */}
+                        <div className="mb-4">
+                          <p className="text-xs text-green-600 mb-1">Action</p>
+                          <p className="text-sm text-gray-800 whitespace-pre-line">
+                            The booking duration was reduced by {differenceInDays} days.
+                            Issue a refund of ₱{differenceInPrice} to the customer.
+                          </p>
+                        </div>
+
+                        {/* Refund */}
+                        <div className="border-t border-green-200 pt-4">
+                          <p className="text-xs text-green-600 mb-1">Refund Amount</p>
+                          <p className="text-lg font-bold text-green-700">
+                            ₱{selectedBooking.refundAmount}
+                          </p>
+
+                          {selectedBooking.refundAmount === 0 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              No refund was issued for this booking
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                  )}
+                  {/* Extending Booking days Details */}
+                  {(isExtending) && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 mt-6">
+                        <h3 className="text-lg font-semibold text-blue-700 mb-4 flex items-center">
+                          <AlertCircleIcon size={20} className="mr-2" />
+                          Extended Booking Duration Details
+                        </h3>
+
+                        {/* Reason */}
+                        <div className="mb-4">
+                          <p className="text-xs text-blue-600 mb-1">Action</p>
+                          <p className="text-sm text-gray-800 whitespace-pre-line">
+                            The booking duration was extended by {differenceInDays} days.
+                            Charge an additional ₱{differenceInPrice} to the customer.
+                          </p>
+                        </div>
+                      </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -793,7 +850,7 @@ const AdminBookingManagement = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       {getStatusBadge(booking.status)}
-                      {(booking.history > 0) && (
+                      {(booking.history.length > 0) && (
                         <span className="px-3 py-1 text-xs font-medium rounded-full
                                         bg-blue-100 text-blue-700 border border-blue-200">
                           Modify Booking

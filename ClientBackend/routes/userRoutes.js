@@ -17,6 +17,14 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const JWT_SECRET = 'Bedrock';
 
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "joshuabalba@gmail.com",
+    pass: "ghle cwzc ywuh hukc",
+  },
+});
+
 // Helper function to upload to Cloudinary
 const uploadToCloudinary = (fileBuffer, foldername) => {
   return new Promise((resolve, reject) => {
@@ -100,6 +108,12 @@ router.post('/login', async (req, res) => {
           console.log('Password mismatch for user:', email);
           return res.status(401).json({ message: "Wrong Email/Username or Password" });
         }
+
+        if (!userLogin.isEmailVerified) {
+          return res.status(403).json({
+            message: "Please verify your email before logging in"
+          });
+        }
     
         const token = jwt.sign({ id: userLogin._id }, JWT_SECRET, { expiresIn: rememberMe ? "7d" : "1d" });
     
@@ -136,6 +150,7 @@ router.post('/register', async (req, res) => {
         }
     
         const hashedPassword = await bcrypt.hash(password, 10);
+        const emailToken = crypto.randomBytes(32).toString("hex");
     
         const newUser = new Users({
           firstName: firstName,
@@ -150,18 +165,32 @@ router.post('/register', async (req, res) => {
           licenseSelfie: "",
           birthdate: "",
           bookings: [],
-          transactions: []
+          transactions: [],
+          emailVerificationToken: emailToken,
+          emailVerificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
         });
     
         await newUser.save();
     
-        const token = jwt.sign({ id: newUser._id }, JWT_SECRET, { expiresIn: "1h" });
+        // const token = jwt.sign({ id: newUser._id }, JWT_SECRET, { expiresIn: "1h" });
     
-        res.cookie("token", token, {
-          httpOnly: true,
-          secure: false,         // or true if using HTTPS
-          sameSite: "lax",     // or "none" if cross-site cookies
-          maxAge: 1000 * 60 * 60
+        // res.cookie("token", token, {
+        //   httpOnly: true,
+        //   secure: false,
+        //   sameSite: "lax", 
+        //   maxAge: 1000 * 60 * 60
+        // });
+
+        const resetUrl = `http://localhost:5173/verify-email?token=${emailToken}`;
+
+        await transporter.sendMail({
+          to: newUser.email,
+          subject: "Verify your Car Rental account",
+          html: `
+            <h2>Verify your email</h2>
+            <p>Click the link below to activate your account:</p>
+            <a href="${resetUrl}">Verify Email</a>
+          `
         });
     
         return res.status(201).json({ message: 'Registered successfully!' });
@@ -171,6 +200,29 @@ router.post('/register', async (req, res) => {
         return res.status(500).json({ message: err.message });
       }
 });
+
+// Verify Email
+router.get("/verify-email", async (req, res) => {
+  const { token } = req.query;
+
+  const user = await Users.findOne({
+    emailVerificationToken: token,
+    emailVerificationTokenExpires: { $gt: Date.now() }
+  });
+
+  if (!user) {
+    return res.status(400).json({ message: "Invalid or expired token" });
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationTokenExpires = undefined;
+
+  await user.save();
+
+  res.json({ message: "Email verified successfully" });
+});
+
 
 // Update User
 router.put('/me', auth, async (req, res) => {

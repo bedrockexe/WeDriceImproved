@@ -32,6 +32,7 @@ import PrivacyPolicy from "./pages/Policy";
 import { NotificationProvider } from "./NotificationWrapper";
 import Test from "./Test";
 import DeleteAccount from "./pages/components/Dashboard/pages/DeleteAccount";
+import VerifyEmail from "./EmailVerification";
 
 
 export default function App() {
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route

@@ -57,6 +57,9 @@ const Login = () => {
     } catch (err) {
       if (err.response?.status === 401) {
         toast.error(err.response.data.message || "Invalid credentials. Please try again.", { duration: 5000 });
+      } 
+      if (err.response?.status === 403) {
+        toast.error(err.response.data.message || "Account not verified. Please check your email.", { duration: 5000 });
       }
     } finally {
       setIsLoading(false);

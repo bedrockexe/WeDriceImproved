@@ -23,6 +23,7 @@ router.put('/approve/:id', async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
     const user = await User.findOne({ userId: booking.renterId });
+    let isReducing = false;
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
@@ -34,9 +35,13 @@ router.put('/approve/:id', async (req, res) => {
       });
     }
 
+    if (booking.history && booking.history.length > 0 && booking.history[0].previous.totalPrice > booking.history[0].updated.totalPrice) {
+      isReducing = true;
+    }
+
     const transaction = await Payment.findOne({ bookingId: booking.bookingId, status: 'pending' });
 
-    if (!transaction) {
+    if (!transaction && !isReducing) {
       return res.status(404).json({ message: 'Associated payment transaction not found' });
     }
 
@@ -44,9 +49,10 @@ router.put('/approve/:id', async (req, res) => {
 
     await booking.save();
 
-    transaction.status = 'completed';
-
-    await transaction.save();
+    if (!isReducing) {
+      transaction.status = 'completed';
+      await transaction.save();
+    }
 
     await ClientNotifications.create({
       userId: booking.renterId,
