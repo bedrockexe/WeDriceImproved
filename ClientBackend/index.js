@@ -4,12 +4,16 @@ import carRoutes from './routes/carRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
+import receiptRoutes from './routes/receiptRoutes.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
 import Booking from './models/Bookings.js';
 import Cars from './models/Cars.js';
+import Users from './models/Users.js'; // Import Users model
+import { sendBookingEmail } from './services/emailService.js';
+
 import http from 'http';
 import { Server } from 'socket.io';
 
@@ -63,17 +67,33 @@ mongoose
 cron.schedule('* * * * *', async () => {
   try {
     const now = new Date();
-    console.log('Running booking status update check at', now);
+    // console.log('Running booking status update check at', now);
 
-    // 1️⃣ Approved → Ongoing
-    await Booking.updateMany(
-      {
-        status: 'approved',
-        startDate: { $lte: now },
-        endDate: { $gt: now }
-      },
-      { $set: { status: 'ongoing' } }
-    );
+    // 1️⃣ Find Approved bookings that should now be Ongoing
+    const bookingsToStart = await Booking.find({
+      status: 'approved',
+      startDate: { $lte: now },
+      endDate: { $gt: now }
+    });
+
+    if (bookingsToStart.length > 0) {
+      console.log(`Found ${bookingsToStart.length} bookings starting now.`);
+
+      for (const booking of bookingsToStart) {
+        booking.status = 'ongoing';
+        await booking.save();
+
+        // Send 'Ongoing' email
+        try {
+          const user = await Users.findOne({ userId: booking.renterId });
+          if (user && user.email) {
+            await sendBookingEmail(user.email, booking.bookingId, "ongoing", "", booking);
+          }
+        } catch (emailErr) {
+          console.error(`Failed to send ongoing email for booking ${booking.bookingId}:`, emailErr);
+        }
+      }
+    }
 
     // 2️⃣ Ongoing → Completed
     await Booking.updateMany(
@@ -104,7 +124,7 @@ cron.schedule('* * * * *', async () => {
       { $set: { status: "available" } }
     );
 
-    console.log("Car statuses synced successfully");
+    // console.log("Car statuses synced successfully");
   } catch (err) {
     console.error('Booking auto-update failed:', err);
   }
@@ -114,6 +134,7 @@ app.use("/api/cars", carRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/transactions", transactionRoutes);
+app.use("/api/receipts", receiptRoutes);
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

@@ -45,7 +45,7 @@ router.post("/create", adminAuth, async (req, res) => {
     res.status(201).json({ message: "Admin created successfully", admin: newAdmin });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
-  } 
+  }
 });
 
 router.get("/me", adminAuth, async (req, res) => {
@@ -70,7 +70,7 @@ router.post("/login", async (req, res) => {
     const admin = await Admin.findOne({ email, password });
     if (!admin) {
       return res.status(401).json({ message: "Invalid credentials" });
-    }   
+    }
 
     const token = jwt.sign(
       { id: admin._id, role: "admin" },
@@ -85,9 +85,9 @@ router.post("/login", async (req, res) => {
       maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
     });
     res.json({ message: "Login successful", admin });
-    } catch (error) {
-      res.status(500).json({ message: "Server error" });
-    }
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 router.post("/logout", (req, res) => {
@@ -189,7 +189,7 @@ router.post("/reset-password/:token", async (req, res) => {
     admin.resetPasswordToken = undefined;
     admin.resetPasswordExpires = undefined;
 
-    await admin.save();  
+    await admin.save();
 
     res.json({
       message: "Password reset successful. You can now login.",
@@ -291,64 +291,64 @@ router.get("/dashboard", adminAuth, async (req, res) => {
 });
 
 router.put("/profile", adminAuth, upload.none(), async (req, res) => {
-    try {
-      const admin = await Admin.findById(req.admin.id);
+  try {
+    const admin = await Admin.findById(req.admin.id);
 
-      if (!admin) {
-        return res.status(404).json({ message: "Admin not found" });
-      }
-
-      // Update name
-      if (req.body.name) {
-        admin.name = req.body.name;
-      }
-
-      await admin.save();
-
-      res.status(200).json({
-        message: "Profile updated",
-        admin: {
-          id: admin._id,
-          name: admin.name,
-          email: admin.email,
-          role: admin.role,
-        },
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to update profile" });
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
     }
+
+    // Update name
+    if (req.body.name) {
+      admin.name = req.body.name;
+    }
+
+    await admin.save();
+
+    res.status(200).json({
+      message: "Profile updated",
+      admin: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to update profile" });
   }
+}
 );
 
 router.put("/change-password", adminAuth, async (req, res) => {
-    try {
-      const { currentPassword, newPassword } = req.body;
+  try {
+    const { currentPassword, newPassword } = req.body;
 
-      const admin = await Admin.findById(req.admin.id);
+    const admin = await Admin.findById(req.admin.id);
 
-      if (!admin) {
-        return res.status(404).json({ message: "Admin not found" });
-      }
-
-      const isMatch = currentPassword === admin.password;
-
-      if (!isMatch) {
-        return res.status(400).json({ message: "Incorrect current password" });
-      }
-
-      admin.password = newPassword;
-
-      await admin.save();
-
-      res.status(200).json({
-        message: "Password changed successfully",
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to change password" });
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
     }
+
+    const isMatch = currentPassword === admin.password;
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Incorrect current password" });
+    }
+
+    admin.password = newPassword;
+
+    await admin.save();
+
+    res.status(200).json({
+      message: "Password changed successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to change password" });
   }
+}
 );
 
 router.get("/notifications", adminAuth, async (req, res) => {

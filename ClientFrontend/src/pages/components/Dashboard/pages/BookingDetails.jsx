@@ -88,47 +88,47 @@ const BookingDetails = () => {
   }
 
   if (isError) {
-  const status = error?.response?.status;
+    const status = error?.response?.status;
 
-  // 🔍 Booking does not exist
-  if (status === 404) {
-    return (
-      <div className="p-12 text-center">
-        <AlertCircleIcon size={48} className="mx-auto text-gray-300 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Booking Not Found</h2>
-        <p className="text-gray-500 mb-6">
-          The booking you’re looking for does not exist or was removed.
-        </p>
-        <Link
-          to="/dashboard/bookings"
-          className="px-6 py-3 bg-green-500 text-white rounded-lg"
-        >
-          Back to My Bookings
-        </Link>
-      </div>
-    );
-  }
+    // 🔍 Booking does not exist
+    if (status === 404) {
+      return (
+        <div className="p-12 text-center">
+          <AlertCircleIcon size={48} className="mx-auto text-gray-300 mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Booking Not Found</h2>
+          <p className="text-gray-500 mb-6">
+            The booking you’re looking for does not exist or was removed.
+          </p>
+          <Link
+            to="/dashboard/bookings"
+            className="px-6 py-3 bg-green-500 text-white rounded-lg"
+          >
+            Back to My Bookings
+          </Link>
+        </div>
+      );
+    }
 
-  // 🔒 Booking is not yours
-  if (status === 403) {
-    return (
-      <div className="p-12 text-center">
-        <AlertCircleIcon size={48} className="mx-auto text-red-300 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-        <p className="text-gray-500 mb-6">
-          You are not authorized to view this booking.
-        </p>
-        <Link
-          to="/dashboard/bookings"
-          className="px-6 py-3 bg-green-500 text-white rounded-lg"
-        >
-          Back to My Bookings
-        </Link>
-      </div>
-    );
-  }
+    // 🔒 Booking is not yours
+    if (status === 403) {
+      return (
+        <div className="p-12 text-center">
+          <AlertCircleIcon size={48} className="mx-auto text-red-300 mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+          <p className="text-gray-500 mb-6">
+            You are not authorized to view this booking.
+          </p>
+          <Link
+            to="/dashboard/bookings"
+            className="px-6 py-3 bg-green-500 text-white rounded-lg"
+          >
+            Back to My Bookings
+          </Link>
+        </div>
+      );
+    }
 
-  // ❓ Fallback
+    // ❓ Fallback
     return (
       <div className="p-12 text-center text-red-500">
         Something went wrong. Please try again later.
@@ -204,7 +204,7 @@ const BookingDetails = () => {
   const startDate = new Date(booking.pickupDate)
   startDate.setHours(0, 0, 0, 0)
 
-  
+
   const getStatusColor = (status) => {
     switch (status.toLowerCase()) {
       case 'approved':
@@ -241,6 +241,33 @@ const BookingDetails = () => {
         return <AlertCircleIcon size={20} className="text-gray-600" />
     }
   }
+
+  // console.log(`currentBooking`, currentBooking.history[0]);
+
+  let oldStart;
+  let oldEnd;
+  let newStart;
+  let newEnd;
+  let newDays;
+  let oldDays;
+  let differenceInDays;
+  let differenceInPrice;
+  let oldPrice;
+
+  if (currentBooking.history.length > 0) {
+    const lastHistory = currentBooking.history[currentBooking.history.length - 1];
+    oldStart = new Date(lastHistory.previous.startDate);
+    oldEnd = new Date(lastHistory.previous.endDate);
+    newStart = new Date(lastHistory.updated.startDate);
+    newEnd = new Date(lastHistory.updated.endDate);
+    newDays = Math.abs(newStart - newEnd) / (1000 * 60 * 60 * 24);
+    oldDays = Math.abs(oldStart - oldEnd) / (1000 * 60 * 60 * 24);
+    oldPrice = lastHistory.previous.totalPrice;
+    differenceInPrice = Math.abs(lastHistory.previous.totalPrice - lastHistory.updated.totalPrice);
+    differenceInDays = Math.abs(Math.abs(newStart - newEnd) - Math.abs(oldStart - oldEnd)) / (1000 * 60 * 60 * 24);
+  }
+
+
   return (
     <div>
       <div className="flex items-center mb-6">
@@ -408,17 +435,32 @@ const BookingDetails = () => {
           {/* Price Summary */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 sticky top-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              {currentBooking.history.length > 0 ? 'Updated ' : ''}
               Price Summary
             </h2>
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">
-                  Rental ({booking.rentalDays} days)
+                  {currentBooking.history.length > 0
+                    ? `Original Rental (${oldDays} days)`
+                    : `Rental (${booking.rentalDays} days)`}
                 </span>
                 <span className="text-gray-800">
-                  ₱{booking.pricePerDay * booking.rentalDays}
+                  {currentBooking.history.length > 0
+                    ? `₱${oldPrice-500}`
+                    : `₱${(booking.pricePerDay * booking.rentalDays)}`}
                 </span>
               </div>
+              {currentBooking.history.length > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">
+                    {`Updated Rental (${newDays} days)`}
+                  </span>
+                  <span className="text-gray-800">
+                    {`₱${differenceInPrice}`}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Insurance</span>
                 <span className="text-gray-800">Free</span>
@@ -431,7 +473,7 @@ const BookingDetails = () => {
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-800">Total</span>
                   <span className="font-bold text-2xl text-green-600">
-                    ₱{booking.totalPrice + booking.reservationfee}
+                    ₱{booking.totalPrice + 500}
                   </span>
                 </div>
               </div>
@@ -457,7 +499,9 @@ const BookingDetails = () => {
                   Cancel Booking
                 </button>
               )}
-              <button className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+              <button
+                onClick={() => window.open(`${API}/api/receipts/${booking.id}`, '_blank')}
+                className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium cursor-pointer">
                 Download Receipt
               </button>
               <Link

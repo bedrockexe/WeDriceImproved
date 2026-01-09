@@ -2,8 +2,11 @@ import express from "express";
 import Booking from "../models/Booking.js";
 import Payment from "../models/Payment.js";
 import ClientNotifications from "../models/ClientNotifications.js";
+import AdminNotifications from "../models/AdminNotifications.js";
 import User from "../models/User.js";
 import { io } from "../server.js";
+import { sendBookingEmail } from "../services/emailService.js";
+
 
 const router = express.Router();
 
@@ -13,7 +16,7 @@ router.get("/", async (req, res) => {
     res.json({ bookings });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
-  } 
+  }
 });
 
 router.put('/approve/:id', async (req, res) => {
@@ -53,12 +56,26 @@ router.put('/approve/:id', async (req, res) => {
       type: "booking"
     });
 
+    await AdminNotifications.create({
+      userId: booking.renterId,
+      title: "Booking Approved",
+      message: `Booking with ID ${booking.bookingId} has been approved.`,
+      bookingId: booking.bookingId,
+      type: "booking"
+    });
+
     io.to(booking.renterId).emit('new-notification', {
       userId: booking.renterId,
       message: `Your booking with ID ${booking.bookingId} has been approved.`,
       bookingId: booking.bookingId,
       type: "booking"
     });
+
+    // Send email
+    if (user && user.email) {
+      await sendBookingEmail(user.email, booking.bookingId, "approved", "", booking);
+    }
+
 
     res.status(200).json({
       message: 'Booking approved successfully',
@@ -81,7 +98,9 @@ router.put('/decline/:id', async (req, res) => {
     }
 
     const booking = await Booking.findById(req.params.id);
+    const user = await User.findOne({ userId: booking.renterId });
     const transaction = await Payment.findOne({ bookingId: booking.bookingId, status: 'pending' });
+
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
@@ -95,9 +114,8 @@ router.put('/decline/:id', async (req, res) => {
 
     booking.status = 'declined';
     booking.declineReason = declineReason;
-
+    booking.refundedAmount = transaction.totalAmount;
     await booking.save();
-
     transaction.status = 'refunded';
     await transaction.save();
 
@@ -109,12 +127,25 @@ router.put('/decline/:id', async (req, res) => {
       type: "booking"
     });
 
+    await AdminNotifications.create({
+      userId: booking.renterId,
+      title: "Booking Declined",
+      message: `Booking with ID ${booking.bookingId} has been declined. Reason: ${declineReason}`,
+      bookingId: booking.bookingId,
+      type: "booking"
+    });
+
     io.to(booking.renterId).emit('new-notification', {
       userId: booking.renterId,
       message: `Your booking with ID ${booking.bookingId} has been declined. Reason: ${declineReason}`,
       bookingId: booking.bookingId,
       type: "booking"
     });
+
+    // Send email
+    if (user && user.email) {
+      await sendBookingEmail(user.email, booking.bookingId, "declined", declineReason, booking);
+    }
 
     res.status(200).json({
       message: 'Booking declined successfully',
@@ -127,4 +158,3 @@ router.put('/decline/:id', async (req, res) => {
 });
 
 export default router;
-    

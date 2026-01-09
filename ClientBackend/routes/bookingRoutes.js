@@ -9,21 +9,23 @@ import multer from 'multer';
 import cloudinary from '../config/cloudinary.js';
 import { auth } from '../middleware/authentication.js';
 import { io } from '../index.js';
+import { sendBookingEmail } from '../services/emailService.js';
+
 
 const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 const uploadToCloudinary = (fileBuffer, foldername) => {
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader.upload_stream(
-      { folder: foldername },
-      (err, result) => {
-        if (err) reject(err);
-        else resolve(result.secure_url);
-      }
-    ).end(fileBuffer);
-  });
+    return new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+            { folder: foldername },
+            (err, result) => {
+                if (err) reject(err);
+                else resolve(result.secure_url);
+            }
+        ).end(fileBuffer);
+    });
 };
 
 // Create a new booking
@@ -129,10 +131,12 @@ router.post('/create', auth, upload.array("proofOfPayment", 1), async (req, res)
 
         await adminNotification.save();
 
+        // Send Pending Email
+        if (user.email) {
+            await sendBookingEmail(user.email, newBooking.bookingId, "pending", "", newBooking);
+        }
+
         res.status(201).json({ message: "Booking created successfully", booking: newBooking });
-
-
-        
     } catch (error) {
         console.error("Error creating booking:", error);
         res.status(500).json({ message: "Server error" });
@@ -278,11 +282,12 @@ router.put('/modify/:bookingId', auth, upload.array("proofOfPayment", 1), async 
         if (newStart >= newEnd) {
             return res.status(400).json({ message: "Invalid rental dates" });
         }
-        
+
         // Step 4: Check Availability
         const overlappingBookings = await Bookings.find({
             carId: booking.carId,
             bookingId: { $ne: booking.bookingId },
+            status: { $in: ["approved", "pending", "ongoing"] }
         });
         for (let ob of overlappingBookings) {
             if (
@@ -335,11 +340,11 @@ router.put('/modify/:bookingId', auth, upload.array("proofOfPayment", 1), async 
                 $push: { transactions: transaction.transactionId }
             });
         }
-        
+
         // Calculate new total price
         const days = Math.ceil((newEnd - newStart) / (1000 * 60 * 60 * 24));
         const car = await Cars.findOne({ carId: booking.carId });
-        const newTotalPrice = days * car.pricePerDay;
+        const newTotalPrice = (days * car.pricePerDay) + 500;
 
 
         // Step 7: Update Booking
@@ -369,6 +374,7 @@ router.put('/modify/:bookingId', auth, upload.array("proofOfPayment", 1), async 
         await booking.save();
 
         const clientNotification = new ClientNotifications({
+            title: "Booking Modification Pending",
             userId: user.userId,
             message: `Your booking ${booking.bookingId} is pending modification.`,
             bookingId: booking.bookingId,
@@ -378,6 +384,7 @@ router.put('/modify/:bookingId', auth, upload.array("proofOfPayment", 1), async 
         await clientNotification.save();
 
         const adminNotification = new AdminNotifications({
+            title: "Booking Modified",
             userId: user.userId,
             message: `Booking ${booking.bookingId} modified by user ${user.userId}.`,
             bookingId: booking.bookingId,
@@ -403,107 +410,111 @@ router.put('/modify/:bookingId', auth, upload.array("proofOfPayment", 1), async 
 
 // Cancel a booking
 router.put("/:id/cancel", auth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const userId = await Users.findById(req.user.id).then(user => user.userId);
-    const booking = await Bookings.findById(id);
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        const userId = await Users.findById(req.user.id).then(user => user.userId);
+        const booking = await Bookings.findById(id);
 
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+
+        // Ownership check
+        if (booking.renterId !== userId) {
+            return res.status(403).json({ message: "Unauthorized" });
+        }
+
+        // Status validation
+        if (["cancelled", "completed"].includes(booking.status)) {
+            return res.status(400).json({
+                message: `Cannot cancel a ${booking.status.toLowerCase()} booking`
+            });
+        }
+
+        if (booking.status === "ongoing") {
+            return res.status(400).json({
+                message: "Booking already started and cannot be cancelled"
+            });
+        }
+
+        // Refund logic
+        const now = new Date();
+        let refundAmount = booking.totalPrice - 500; // Deduct fixed fee
+
+        // const hoursBeforePickup =
+        //     (booking.startDate - now) / (1000 * 60 * 60);
+
+        // if (hoursBeforePickup >= 24) {
+        //     refundAmount = booking.totalPrice;
+        // } else if (hoursBeforePickup >= 1) {
+        //     refundAmount = booking.totalPrice * 0.5;
+        // }
+
+        // Update booking
+        booking.status = "cancelled";
+        booking.cancelledAt = now;
+        booking.cancellationReason = reason;
+        booking.refundedAmount = refundAmount;
+
+        await booking.save();
+
+        const transaction = await Transactions.findOne({ bookingId: booking.bookingId });
+        if (transaction) {
+            transaction.status = "refunded";
+            await transaction.save();
+        }
+
+        // Update user totalSpent
+        const user = await Users.findById(req.user.id);
+        user.totalSpent -= refundAmount;
+        await user.save();
+
+        // Notifications
+        const clientNotification = new ClientNotifications({
+            userId: user.userId,
+            title: "Booking Cancelled",
+            message: `Your booking ${booking.bookingId} has been cancelled.`,
+            bookingId: booking.bookingId,
+            type: "booking"
+        });
+
+        await clientNotification.save();
+
+        const adminNotification = new AdminNotifications({
+            userId: user.userId,
+            title: "Booking Cancelled",
+            message: `Booking ${booking.bookingId} cancelled by user ${user.userId}.`,
+            bookingId: booking.bookingId,
+            type: "booking"
+        });
+
+        await adminNotification.save();
+
+        io.emit("new-notification", {
+            userId: user.userId,
+            message: `Booking cancelled: ${booking.bookingId}`,
+            bookingId: booking.bookingId,
+            type: "booking"
+        });
+
+        // Send Cancelled Email
+        if (user.email) {
+            await sendBookingEmail(user.email, booking.bookingId, "cancelled", reason, booking);
+        }
+
+
+        res.status(200).json({
+            message: "Booking cancelled successfully",
+            refundAmount
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Server error while cancelling booking"
+        });
     }
-
-    // Ownership check
-    if (booking.renterId !== userId) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
-
-    // Status validation
-    if (["cancelled", "completed"].includes(booking.status)) {
-      return res.status(400).json({
-        message: `Cannot cancel a ${booking.status.toLowerCase()} booking`
-      });
-    }
-
-    if (booking.status === "ongoing") {
-      return res.status(400).json({
-        message: "Booking already started and cannot be cancelled"
-      });
-    }
-
-    // Refund logic
-    const now = new Date();
-    let refundAmount = 0;
-
-    const hoursBeforePickup =
-      (booking.startDate - now) / (1000 * 60 * 60);
-
-    if (hoursBeforePickup >= 24) {
-      refundAmount = booking.totalPrice;
-    } else if (hoursBeforePickup >= 1) {
-      refundAmount = booking.totalPrice * 0.5;
-    }
-
-    // Update booking
-    booking.status = "cancelled";
-    booking.cancelledAt = now;
-    booking.cancellationReason = reason;
-    booking.refundedAmount = refundAmount;
-
-    await booking.save();
-
-    const transaction = await Transactions.findOne({ bookingId: booking.bookingId });
-    if (transaction) {
-      transaction.status = "refunded";
-      await transaction.save();
-    }
-
-    // Update user totalSpent
-    const user = await Users.findById(req.user.id);
-    user.totalSpent -= refundAmount;
-    await user.save();
-
-    // Notifications
-    const clientNotification = new ClientNotifications({
-      userId: user.userId,
-      title: "Booking Cancelled",
-      message: `Your booking ${booking.bookingId} has been cancelled.`,
-      bookingId: booking.bookingId,
-      type: "booking"
-    });
-
-    await clientNotification.save();
-
-    const adminNotification = new AdminNotifications({
-      userId: user.userId,
-      title: "Booking Cancelled",
-      message: `Booking ${booking.bookingId} cancelled by user ${user.userId}.`,
-      bookingId: booking.bookingId,
-      type: "booking"
-    });
-
-    await adminNotification.save();
-
-    io.emit("new-notification", {
-      userId: user.userId,
-      message: `Booking cancelled: ${booking.bookingId}`,
-      bookingId: booking.bookingId,
-      type: "booking"
-    });
-
-    await adminNotification.save();
-
-    res.status(200).json({
-      message: "Booking cancelled successfully",
-      refundAmount
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Server error while cancelling booking"
-    });
-  }
 });
 
 

@@ -15,6 +15,8 @@ const TopNavBar = ({ toggleSidebar }) => {
   const { notifications, unreadCount, fetchNotifications } = useNotifications();
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
 
   useEffect(() => {
     axios
@@ -185,19 +187,62 @@ const TopNavBar = ({ toggleSidebar }) => {
 
                 <div className="border-t border-gray-100"></div>
 
-                <Link
-                  to="/login"
-                  onClick={handleLogout}
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                <button
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    setShowLogoutModal(true);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
                 >
                   Logout
-                </Link>
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
     </header>
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowLogoutModal(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6 z-10">
+            <h2 className="text-lg font-semibold text-gray-800">
+              Confirm Logout
+            </h2>
+
+            <p className="text-sm text-gray-600 mt-2">
+              Are you sure you want to log out? You will need to log in again to
+              access your account.
+            </p>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={async () => {
+                  setShowLogoutModal(false);
+                  await handleLogout();
+                }}
+                className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 };

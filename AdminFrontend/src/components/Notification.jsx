@@ -2,48 +2,35 @@ import { X, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSearchParams } from "react-router-dom";
 
 
-export const NotificationPanel = ({ isOpen, onClose }) => {
+export const NotificationPanel = ({ isOpen, onClose, notifList = [], onRefresh }) => {
   const API = import.meta.env.VITE_API_URL || "http://localhost:5001";
-    const [notifications, setNotifications] = useState([]);
-    const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    const fetchNotifications = async () => {
-      try {
-        const response = await axios.get(
-          `${API}/api/admin/notifications`,
-          { withCredentials: true }
-        );
-        setNotifications(response.data.notifications.slice(0, 3));
-      } catch (error) {
-        console.error("Error fetching notifications:", error);
-      }
-    };
+  const handleNotificationClick = async (notif) => {
+    onClose();
+    const type = notif.type;
+    const id = type === "booking" ? notif.bookingId : notif.userId;
 
-    useEffect(() => {
-      fetchNotifications();
-    }, [API]);
-
-    const handleNotificationClick = async (notif) => {
-      onClose();
-      const type = notif.type;
-      const id = type === "booking" ? notif.bookingId : notif.userId;
-      if (!id) return;
-      if (type === "booking") {
-        navigate(`/dashboard/bookings?bookingId=${id}`);
-      } else if (type === "verification") {
-        navigate(`/dashboard/customers?userId=${id}`);
-      }
-      window.location.reload();
+    try {
       await axios.put(`${API}/api/admin/notifications/mark-read/${notif.id}`, {}, { withCredentials: true });
-    };
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error("Failed to mark as read", err);
+    }
 
-    console.log("Notifications:", notifications);
+    if (!id) return;
+    if (type === "booking") {
+      navigate(`/dashboard/bookings?bookingId=${id}`);
+    } else if (type === "verification") {
+      navigate(`/dashboard/customers?userId=${id}`);
+    }
+  };
+
+  const notifications = notifList || [];
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -76,15 +63,20 @@ export const NotificationPanel = ({ isOpen, onClose }) => {
               </button>
             </div>
 
+            {notifications.length === 0 && (
+              <div className="p-4 text-center text-sm text-gray-500">
+                No notifications
+              </div>
+            )}
+
             {/* List */}
             <div className="max-h-80 overflow-y-auto">
               {notifications.map((notif) => (
                 <div
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
-                  className={`px-4 py-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 ${
-                    !notif.isRead ? "bg-emerald-50" : ""
-                  }`}
+                  className={`px-4 py-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 ${!notif.isRead ? "bg-emerald-50" : ""
+                    }`}
                 >
                   <p className="text-sm font-medium text-gray-900">
                     {notif.title}

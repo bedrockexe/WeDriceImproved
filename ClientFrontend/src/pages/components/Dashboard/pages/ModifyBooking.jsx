@@ -160,8 +160,8 @@ const ModifyBooking = () => {
   useEffect(() => {
     if (originalBooking) {
       setBookingData({
-        pickupDate: originalBooking.startDate,
-        returnDate: originalBooking.endDate,
+        pickupDate: formatDate(new Date(originalBooking.startDate)),
+        returnDate: formatDate(new Date(originalBooking.endDate)),
         pickupLocationType: originalBooking.pickupLocationType || '',
         returnLocationType: originalBooking.returnLocationType || '',
         pickupLocation: originalBooking.pickupLocation || '',
@@ -173,13 +173,14 @@ const ModifyBooking = () => {
   }, [originalBooking]);
 
 
+
   const disabledRanges = carBookings?.map(b => ({
     start: new Date(b.startDate),
     end: new Date(b.endDate)
   })) || [];
 
   const calculatePriceDifference = () => {
-    return calculateTotal() - originalBooking.totalPrice
+    return (calculateTotal() - originalBooking.totalPrice) + 500 || 0;
   }
 
   const getMinimumAvailableDate = () => {
@@ -394,6 +395,8 @@ const ModifyBooking = () => {
 
     try {
       const formData = new FormData();
+
+      console.log(bookingData.pickupDate, bookingData.returnDate);
 
       formData.append("startDate", bookingData.pickupDate);
       formData.append("endDate", bookingData.returnDate);
@@ -883,7 +886,7 @@ const ModifyBooking = () => {
                     {originalDays} days
                   </span>
                   <span className="text-gray-800">
-                    ₱{originalBooking.totalPrice}
+                    ₱{originalBooking.totalPrice - 500}
                   </span>
                 </div>
               </div>
@@ -907,17 +910,13 @@ const ModifyBooking = () => {
                   <span className="text-gray-600">Insurance</span>
                   <span className="text-gray-800">Free</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Reservation Fee</span>
-                  <span className="text-gray-800">₱500</span>
-                </div>
                 <div className="border-t border-gray-200 pt-3 mt-3">
                   <div className="flex justify-between">
                     <span className="font-semibold text-gray-800">
                       New Total
                     </span>
                     <span className="font-bold text-2xl text-green-600">
-                      ₱{calculateTotal() + 500}
+                      ₱{calculateTotal()}
                     </span>
                   </div>
                 </div>

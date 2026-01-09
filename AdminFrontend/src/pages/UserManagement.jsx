@@ -19,6 +19,7 @@ import { ConfirmationModal } from './ConfirmationModal'
 import { toast, Toaster } from 'sonner'
 import axios from 'axios'
 import { useSearchParams } from 'react-router-dom'
+import { useNotifications } from "../NotificationWrapper";  
 
 
 const formatDate = (dateStr) => {
@@ -28,6 +29,7 @@ const formatDate = (dateStr) => {
 
 const AdminVerification = () => {
   const API = import.meta.env.VITE_API_URL || "http://localhost:5001";
+  const { fetchNotifications } = useNotifications();
   const [requests, setRequests] = useState([])
   const [selectedRequest, setSelectedRequest] = useState(null)
   const [filterStatus, setFilterStatus] = useState('pending')
@@ -83,10 +85,6 @@ const AdminVerification = () => {
     fetchUsers()
   }, [searchParams])
 
-  console.log('All Requests:', requests)
-
-
-
   const filteredRequests = requests.filter((req) => {
     const matchesStatus =
       filterStatus === 'all' || req.status === filterStatus
@@ -111,6 +109,7 @@ const AdminVerification = () => {
       console.error('Error approving verification:', error)
       toast.error('Failed to approve verification.')
     }
+    fetchNotifications();
     setTimeout(() => {
       setRequests((prev) =>
         prev.map((req) =>
@@ -135,8 +134,6 @@ const AdminVerification = () => {
       return
     }
     setIsProcessing(true)
-    console.log('Rejecting request:', selectedRequest.id)
-    // Simulate API call
     try {
       const res = await axios.put(`${API}/api/users/reject/${selectedRequest.id}`, { rejectionReason }, {withCredentials: true});
       toast.success(res.data.message);
@@ -144,6 +141,7 @@ const AdminVerification = () => {
       toast.error('Failed to reject verification.')
       console.error('Error rejecting verification:', error)
     }
+    fetchNotifications();
     setTimeout(() => {
       setRequests((prev) =>
         prev.map((req) =>

@@ -19,6 +19,7 @@ import {
 import { ConfirmationModal } from './ConfirmationModal'
 import { toast, Toaster } from 'sonner'
 import { useSearchParams } from "react-router-dom"
+import { useNotifications } from '../NotificationWrapper'
 import axios from 'axios'
 
 const formatDate = (dateString) => {
@@ -29,6 +30,7 @@ const formatDate = (dateString) => {
 const AdminBookingManagement = () => {
   const [searchParams] = useSearchParams()
   const API = import.meta.env.VITE_API_URL || "http://localhost:5001";
+  const { fetchNotifications } = useNotifications();
   const [bookings, setBookings] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState(
@@ -44,69 +46,68 @@ const AdminBookingManagement = () => {
 
   useEffect(() => {
     const fetchBookings = async () => {
-    try {
-      const response = await axios.get(`${API}/api/bookings`, {withCredentials: true});
-      const bookings = response.data.bookings;
-      console.log("Fetched Bookings:", bookings);
+      try {
+        const response = await axios.get(`${API}/api/bookings`, { withCredentials: true });
+        const bookings = response.data.bookings;
 
-      // Build all booking data in parallel
-      const detailedBookings = await Promise.all(
-        bookings.map(async (currentBooking) => {
-          const renterFetch = await axios.get(`${API}/api/users/${currentBooking.renterId}`, {withCredentials: true});
-          const renter = renterFetch.data.user;
+        // Build all booking data in parallel
+        const detailedBookings = await Promise.all(
+          bookings.map(async (currentBooking) => {
+            const renterFetch = await axios.get(`${API}/api/users/${currentBooking.renterId}`, { withCredentials: true });
+            const renter = renterFetch.data.user;
 
-          const carFetch = await axios.get(`${API}/api/cars/${currentBooking.carId}`, {withCredentials: true});
-          const car = carFetch.data.car;
+            const carFetch = await axios.get(`${API}/api/cars/${currentBooking.carId}`, { withCredentials: true });
+            const car = carFetch.data.car;
 
-          const paymentFetch = await axios.get(`${API}/api/payments/${currentBooking.transactions[currentBooking.modifiedCount]}`, {withCredentials: true});
-          const payment = paymentFetch.data.payment;
+            const paymentFetch = await axios.get(`${API}/api/payments/${currentBooking.transactions[currentBooking.modifiedCount]}`, { withCredentials: true });
+            const payment = paymentFetch.data.payment;
 
-          const rentalDays =
-            (new Date(currentBooking.endDate) - new Date(currentBooking.startDate)) / (1000 * 60 * 60 * 24);
+            const rentalDays =
+              (new Date(currentBooking.endDate) - new Date(currentBooking.startDate)) / (1000 * 60 * 60 * 24);
 
-          return {
-            bookingid: currentBooking._id,
-            id: currentBooking.bookingId,
-            userId: renter.userId,
-            userName: renter.userName,
-            userEmail: renter.email,
-            userPhone: renter.phone,
-            carName: car.name,
-            carImage: car.mainImage,
-            carId: car.carId,
-            pickupDate: formatDate(currentBooking.startDate),
-            pickupTime: "10:00 AM",
-            returnDate: formatDate(currentBooking.endDate),
-            returnTime: "10:00 AM",
-            pickupLocation: currentBooking.pickupLocation,
-            returnLocation: currentBooking.returnLocation,
-            rentalDays,
-            pricePerDay: car.pricePerDay,
-            insurance: "Free",
-            reservationFee: 500,
-            totalPrice: currentBooking.totalPrice,
-            paymentMethod: payment.paymentMethod,
-            proofOfPayment: 'proof_of_payment.jpg',
-            proofOfPaymentUrl: payment.paymentProof,
-            submittedDate: currentBooking.createdAt,
-            status: currentBooking.status,
-            history: currentBooking.history.length,
-            declineReason: currentBooking.declineReason || '',
-            cancellationReason: currentBooking.cancellationReason || '',
-            refundAmount: currentBooking.refundedAmount || 0,
-          };
-        })
-      );
+            return {
+              bookingid: currentBooking._id,
+              id: currentBooking.bookingId,
+              userId: renter.userId,
+              userName: renter.userName,
+              userEmail: renter.email,
+              userPhone: renter.phone,
+              carName: car.name,
+              carImage: car.mainImage,
+              carId: car.carId,
+              pickupDate: formatDate(currentBooking.startDate),
+              pickupTime: "10:00 AM",
+              returnDate: formatDate(currentBooking.endDate),
+              returnTime: "10:00 AM",
+              pickupLocation: currentBooking.pickupLocation,
+              returnLocation: currentBooking.returnLocation,
+              rentalDays,
+              pricePerDay: car.pricePerDay,
+              insurance: "Free",
+              reservationFee: 500,
+              totalPrice: currentBooking.totalPrice,
+              paymentMethod: payment.paymentMethod,
+              proofOfPayment: 'proof_of_payment.jpg',
+              proofOfPaymentUrl: payment.paymentProof,
+              submittedDate: currentBooking.createdAt,
+              status: currentBooking.status,
+              history: currentBooking.history,
+              declineReason: currentBooking.declineReason || '',
+              cancellationReason: currentBooking.cancellationReason || '',
+              refundAmount: currentBooking.refundedAmount || 0,
+            };
+          })
+        );
 
-      setBookings(detailedBookings);
-    } catch (error) {
-      toast.error('Failed to fetch bookings');
-      console.error('Error fetching bookings:', error);
-    }
-  };
+        setBookings(detailedBookings);
+      } catch (error) {
+        toast.error('Failed to fetch bookings');
+        console.error('Error fetching bookings:', error);
+      }
+    };
 
-  fetchBookings();
-}, []);
+    fetchBookings();
+  }, []);
 
   if (bookingId && !selectedBooking) {
     console.log("Searching for bookingId from URL:", bookingId);
@@ -116,7 +117,6 @@ const AdminBookingManagement = () => {
       setSelectedBooking(booking)
     }
   }
-
 
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch =
@@ -130,72 +130,76 @@ const AdminBookingManagement = () => {
   })
 
   const getStatusBadge = (status) => {
-  const configs = {
-    pending: {
-      label: 'Pending Review',
-      color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    },
-    approved: {
-      label: 'Approved',
-      color: 'bg-green-100 text-green-800 border-green-200',
-    },
-    declined: {
-      label: 'Declined',
-      color: 'bg-red-100 text-red-800 border-red-200',
-    },
-    completed: {
-      label: 'Completed',
-      color: 'bg-blue-100 text-blue-800 border-blue-200',
-    },
-    ongoing: {
-      label: 'Ongoing',
-      color: 'bg-blue-100 text-blue-800 border-blue-200',
-    },
-    cancelled: {
-      label: 'Cancelled',
-      color: 'bg-red-100 text-red-800 border-red-200',
-    },
-  }
+    const configs = {
+      pending: {
+        label: 'Pending Review',
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      },
+      approved: {
+        label: 'Approved',
+        color: 'bg-green-100 text-green-800 border-green-200',
+      },
+      declined: {
+        label: 'Declined',
+        color: 'bg-red-100 text-red-800 border-red-200',
+      },
+      completed: {
+        label: 'Completed',
+        color: 'bg-blue-100 text-blue-800 border-blue-200',
+      },
+      ongoing: {
+        label: 'Ongoing',
+        color: 'bg-blue-100 text-blue-800 border-blue-200',
+      },
+      cancelled: {
+        label: 'Cancelled',
+        color: 'bg-red-100 text-red-800 border-red-200',
+      },
+    }
 
-  const config = configs[status.toLowerCase()] || {
-    label: status,
-    color: 'bg-gray-100 text-gray-800 border-gray-200',
-  }
+    const config = configs[status.toLowerCase()] || {
+      label: status,
+      color: 'bg-gray-100 text-gray-800 border-gray-200',
+    }
 
-  return (
-    <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${config.color}`}
-    >
-      {config.label}
-    </span>
-  )
+    return (
+      <span
+        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${config.color}`}
+      >
+        {config.label}
+      </span>
+    )
   }
 
   const handleApprove = async () => {
     if (!selectedBooking) return
     setIsProcessing(true)
     try {
-      await axios.put(`${API}/api/bookings/approve/${selectedBooking.bookingid}`, {}, {withCredentials: true});
-      toast.success(`Booking ${selectedBooking.id} approved successfully!`)
-    } catch (error) {
-       toast.error('Failed to approve booking');
-      console.error(error);
-    }
-    setTimeout(() => {
-      setBookings((prev) =>
-        prev.map((booking) =>
-          booking.id === selectedBooking.id
-            ? {
+      await axios.put(`${API}/api/bookings/approve/${selectedBooking.bookingid}`, {}, { withCredentials: true });
+      fetchNotifications();
+      setTimeout(() => {
+        setBookings((prev) =>
+          prev.map((booking) =>
+            booking.id === selectedBooking.id
+              ? {
                 ...booking,
                 status: 'approved',
               }
-            : booking,
-        ),
-      )
+              : booking,
+          ),
+        )
+        toast.success(`Booking ${selectedBooking.id} approved successfully!`)
+        setIsProcessing(false)
+        setShowApproveModal(false)
+        setSelectedBooking(null)
+      }, 1500)
+
+    } catch (error) {
       setIsProcessing(false)
-      setShowApproveModal(false)
-      setSelectedBooking(null)
-    }, 1500)
+      const errorMessage = error.response?.data?.message || 'Failed to approve booking';
+      toast.error(errorMessage);
+      console.error(error);
+    }
   }
 
   const handleDecline = async () => {
@@ -203,34 +207,42 @@ const AdminBookingManagement = () => {
       toast.error('Please provide a reason for declining')
       return
     }
+
+    setIsProcessing(true) // Disable button immediately
+
     try {
       await axios.put(
         `${API}/api/bookings/decline/${selectedBooking.bookingid}`,
         { declineReason: declineReason.trim() },
-        {withCredentials: true}
+        { withCredentials: true }
       );
-    } catch (error) {
-      toast.error(error.response.data.message);
-      console.error(error);
-    }
-    setIsProcessing(true)
-    setTimeout(() => {
-      setBookings((prev) =>
-        prev.map((booking) =>
-          booking.id === selectedBooking.id
-            ? {
+      fetchNotifications();
+      // Only proceed if request succeeds
+      setTimeout(() => {
+        setBookings((prev) =>
+          prev.map((booking) =>
+            booking.id === selectedBooking.id
+              ? {
                 ...booking,
                 status: 'declined',
+                declineReason: declineReason.trim(),
               }
-            : booking,
-        ),
-      )
-      toast.success(`Booking ${selectedBooking.id} declined`)
-      setIsProcessing(false)
-      setShowDeclineModal(false)
-      setSelectedBooking(null)
-      setDeclineReason('')
-    }, 1500)
+              : booking,
+          ),
+        )
+        toast.success(`Booking ${selectedBooking.id} declined`)
+        setIsProcessing(false)
+        setShowDeclineModal(false)
+        setSelectedBooking(null)
+        setDeclineReason('')
+      }, 1500)
+
+    } catch (error) {
+      setIsProcessing(false) // Re-enable button on error
+      const errorMessage = error.response?.data?.message || 'Failed to decline booking';
+      toast.error(errorMessage);
+      console.error(error);
+    }
   }
 
   const statsData = {
@@ -240,6 +252,29 @@ const AdminBookingManagement = () => {
     declined: bookings.filter((b) => b.status.toLowerCase() === 'declined').length,
     ongoing: bookings.filter((b) => b.status.toLowerCase() === 'ongoing').length,
     completed: bookings.filter((b) => b.status.toLowerCase() === 'completed').length,
+  }
+
+  let oldStart;
+  let oldEnd;
+  let newStart;
+  let newEnd;
+  let newDays;
+  let oldDays;
+  let differenceInDays;
+  let differenceInPrice;
+  let oldPrice;
+
+  if (selectedBooking && selectedBooking.history.length > 0) {
+    const lastHistory = selectedBooking.history[selectedBooking.history.length - 1];
+    oldStart = new Date(lastHistory.previous.startDate);
+    oldEnd = new Date(lastHistory.previous.endDate);
+    newStart = new Date(lastHistory.updated.startDate);
+    newEnd = new Date(lastHistory.updated.endDate);
+    newDays = Math.abs(newStart - newEnd) / (1000 * 60 * 60 * 24);
+    oldDays = Math.abs(oldStart - oldEnd) / (1000 * 60 * 60 * 24);
+    oldPrice = lastHistory.previous.totalPrice;
+    differenceInPrice = Math.abs(lastHistory.previous.totalPrice - lastHistory.updated.totalPrice);
+    differenceInDays = Math.abs(Math.abs(newStart - newEnd) - Math.abs(oldStart - oldEnd)) / (1000 * 60 * 60 * 24);
   }
 
   return (
@@ -592,19 +627,32 @@ const AdminBookingManagement = () => {
                 <div className="lg:col-span-1">
                   <div className="bg-white border border-gray-200 rounded-lg p-5 sticky top-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                      {selectedBooking && selectedBooking.history.length > 0 ? 'Updated ' : ''}
                       Price Summary
                     </h3>
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">
-                          Rental ({selectedBooking.rentalDays} days)
+                          {selectedBooking.history.length > 0
+                          ? `Original Rental (${oldDays} days)`
+                          : `Rental (${selectedBooking.rentalDays} days)`}
                         </span>
                         <span className="text-gray-800">
-                          ₱
-                          {selectedBooking.pricePerDay *
-                            selectedBooking.rentalDays}
+                          {selectedBooking.history.length > 0
+                          ? `₱${oldPrice-500}`
+                          : `₱${(selectedBooking.pricePerDay * selectedBooking.rentalDays)}`}
                         </span>
                       </div>
+                      {selectedBooking.history.length > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">
+                            {`Updated Rental (${newDays} days)`}
+                          </span>
+                          <span className="text-gray-800">
+                            {`₱${differenceInPrice}`}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Insurance</span>
                         <span className="text-gray-800">
@@ -666,39 +714,39 @@ const AdminBookingManagement = () => {
                   {/* Decline / Cancellation Details */}
                   {(selectedBooking.status === "declined" ||
                     selectedBooking.status === "cancelled") && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-5 mt-6">
-                      <h3 className="text-lg font-semibold text-red-700 mb-4 flex items-center">
-                        <AlertCircleIcon size={20} className="mr-2" />
-                        {selectedBooking.status === "declined"
-                          ? "Decline Details"
-                          : "Cancellation Details"}
-                      </h3>
-
-                      {/* Reason */}
-                      <div className="mb-4">
-                        <p className="text-xs text-red-600 mb-1">Reason</p>
-                        <p className="text-sm text-gray-800 whitespace-pre-line">
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-5 mt-6">
+                        <h3 className="text-lg font-semibold text-red-700 mb-4 flex items-center">
+                          <AlertCircleIcon size={20} className="mr-2" />
                           {selectedBooking.status === "declined"
-                            ? selectedBooking.declineReason
-                            : selectedBooking.cancellationReason}
-                        </p>
-                      </div>
+                            ? "Decline Details"
+                            : "Cancellation Details"}
+                        </h3>
 
-                      {/* Refund */}
-                      <div className="border-t border-red-200 pt-4">
-                        <p className="text-xs text-red-600 mb-1">Refund Amount</p>
-                        <p className="text-lg font-bold text-red-700">
-                          ₱{selectedBooking.refundAmount}
-                        </p>
-
-                        {selectedBooking.refundAmount === 0 && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            No refund was issued for this booking
+                        {/* Reason */}
+                        <div className="mb-4">
+                          <p className="text-xs text-red-600 mb-1">Reason</p>
+                          <p className="text-sm text-gray-800 whitespace-pre-line">
+                            {selectedBooking.status === "declined"
+                              ? selectedBooking.declineReason
+                              : selectedBooking.cancellationReason}
                           </p>
-                        )}
+                        </div>
+
+                        {/* Refund */}
+                        <div className="border-t border-red-200 pt-4">
+                          <p className="text-xs text-red-600 mb-1">Refund Amount</p>
+                          <p className="text-lg font-bold text-red-700">
+                            ₱{selectedBooking.refundAmount}
+                          </p>
+
+                          {selectedBooking.refundAmount === 0 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              No refund was issued for this booking
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                 </div>
               </div>
@@ -751,8 +799,8 @@ const AdminBookingManagement = () => {
                           Modify Booking
                         </span>
                       )}
-                    </div> 
-                    
+                    </div>
+
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">

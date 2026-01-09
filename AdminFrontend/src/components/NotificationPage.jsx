@@ -2,12 +2,12 @@ import { Bell, CheckCircle, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useNotifications } from "../NotificationWrapper";
 
 export default function NotificationsPage() {
   const API = import.meta.env.VITE_API_URL || "http://localhost:5001";
-  const [notifications, setNotifications] = useState([]);
-  const [searchParams] = useSearchParams();
+  const { notifications, fetchNotifications } = useNotifications();
   const navigate = useNavigate();
 
   // Modal state
@@ -17,18 +17,6 @@ export default function NotificationsPage() {
   const [showMarkAllModal, setShowMarkAllModal] = useState(false);
   const [showMarkAllUnreadModal, setShowMarkAllUnreadModal] = useState(false);
   const [processingAll, setProcessingAll] = useState(false);
-
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const response = await axios.get(`${API}/api/admin/notifications`, { withCredentials: true });
-        setNotifications(response.data.notifications);
-      } catch (error) {
-        console.error("Error fetching notifications:", error);
-      }
-    };
-    fetchNotifications();
-  }, []);
 
   console.log("Notifications:", notifications);
 
@@ -43,6 +31,7 @@ export default function NotificationsPage() {
     }
     window.location.reload();
     await axios.put(`${API}/api/admin/notifications/mark-read/${notif.id}`, {}, { withCredentials: true });
+    fetchNotifications();
   };
 
   // Delete modal
@@ -54,7 +43,7 @@ export default function NotificationsPage() {
   const handleDelete = async () => {
     if (!selectedNotif) return;
     await axios.patch(`${API}/api/admin/notifications/delete/${selectedNotif}`, {}, { withCredentials: true });
-    setNotifications((prevNotifs) => prevNotifs.filter((notif) => notif.id !== selectedNotif));
+    fetchNotifications();
     setShowDeleteModal(false);
     setSelectedNotif(null);
   };
@@ -66,7 +55,7 @@ export default function NotificationsPage() {
     setProcessingAll(true);
     try {
       await axios.put(`${API}/api/admin/notifications/mark-all-read`, {}, { withCredentials: true });
-      setNotifications((prev) => prev.map((notif) => ({ ...notif, isRead: true })));
+      fetchNotifications();
     } catch (error) {
       console.error("Error marking all as read:", error);
     }
@@ -80,7 +69,7 @@ export default function NotificationsPage() {
     setProcessingAll(true);
     try {
       await axios.put(`${API}/api/admin/notifications/mark-all-unread`, {}, { withCredentials: true });
-      setNotifications((prev) => prev.map((notif) => ({ ...notif, isRead: false })));
+      fetchNotifications();
     } catch (error) {
       console.error("Error marking all as unread:", error);
     }

@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { socket } from "../notification/socket";
 import { toast, Toaster } from "sonner";
+import { useNotifications } from "../NotificationWrapper";
 
 
 const getPageTitle = (pathname) => {
@@ -34,46 +35,14 @@ const getPageTitle = (pathname) => {
 
 export const Header = ({ onMenuClick, isSidebarOpen }) => {
   const API = import.meta.env.VITE_API_URL || "http://localhost:5001";
-  const {admin, logout} = useAuth();
+  const { admin, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const pageTitle = getPageTitle(location.pathname);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { notifications, unreadCount, fetchNotifications } = useNotifications();
 
-  const fetchUnreadCount = async () => {
-    try {
-      const response = await axios.get(
-        `${API}/api/admin/notifications/unread-count`,
-        { withCredentials: true }
-      );
-      setUnreadCount(response.data.unreadCount);
-    } catch (error) {
-      console.error("Error fetching unread notifications count:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchUnreadCount();
-  }, [API]);
-
-  console.log("Notifications in Header:", notifications);
-
-  useEffect(() => {
-    const handleNotification = (data) => {
-      toast.success("New notification received", {duration: 4000});
-      console.log("New notification data:", data.userId);
-      fetchUnreadCount();
-      setUnreadCount(unreadCount + 1);
-    };
-
-    socket.on("new-notification", handleNotification);
-
-    return () => {
-      socket.off("new-notification", handleNotification);
-    };
-  }, []);
+  const slicedNotifications = notifications.slice(0, 3);
 
   const handleLogout = async () => {
     try {
@@ -89,9 +58,9 @@ export const Header = ({ onMenuClick, isSidebarOpen }) => {
       <Toaster position="top-right" richColors />
       <header className="h-14 sm:h-16 border-b border-border bg-card flex items-center justify-between px-3 sm:px-4 md:px-6 sticky top-0 z-30">
         <div className="flex items-center gap-2 sm:gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onMenuClick}
             title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
@@ -99,14 +68,14 @@ export const Header = ({ onMenuClick, isSidebarOpen }) => {
           </Button>
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold truncate">{pageTitle}</h1>
         </div>
-        
+
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              onClick={() => setShowNotifications((prev) => !prev)}
-            >
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => setShowNotifications((prev) => !prev)}
+          >
             <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
             {unreadCount > 0 && (
               <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full transform translate-x-1/2 -translate-y-1/2">
@@ -114,9 +83,9 @@ export const Header = ({ onMenuClick, isSidebarOpen }) => {
               </span>
             )}
           </Button>
-          
+
           <div className="h-6 sm:h-8 w-px bg-border hidden sm:block" />
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 h-auto py-1.5 sm:py-2 px-2 sm:px-3">
@@ -130,7 +99,7 @@ export const Header = ({ onMenuClick, isSidebarOpen }) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 bg-card">
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => navigate("/dashboard/profile")}
                 className="cursor-pointer">
                 Profile Settings
@@ -152,7 +121,8 @@ export const Header = ({ onMenuClick, isSidebarOpen }) => {
       <NotificationPanel
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
-        notifList={notifications}
+        notifList={slicedNotifications}
+        onRefresh={fetchNotifications}
       />
     </>
   );

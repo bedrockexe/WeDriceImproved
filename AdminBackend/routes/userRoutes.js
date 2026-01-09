@@ -3,7 +3,9 @@ import User from "../models/User.js";
 import mongoose from "mongoose";
 import deleteFolder from "./deletefolder.js";
 import ClientNotifications from "../models/ClientNotifications.js";
+import AdminNotifications from "../models/AdminNotifications.js";
 import { io } from "../server.js";
+import { sendBookingEmail } from "../services/emailService.js";
 
 
 const router = express.Router();
@@ -51,9 +53,9 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     let user;
     if (mongoose.Types.ObjectId.isValid(id)) {
-        user = await User.findById(id);
+      user = await User.findById(id);
     } else {
-        user = await User.findOne({ userId: id });
+      user = await User.findOne({ userId: id });
     }
     if (!user) return res.status(404).json({ message: "User not found" });
     const mappedUser = {
@@ -105,6 +107,13 @@ router.put('/approve/:id', async (req, res) => {
       userId: user.userId,
       title: "Account Verified",
       message: `Your account has been verified successfully.`,
+      type: "verification"
+    });
+
+    await AdminNotifications.create({
+      userId: user.userId,
+      title: "Account Verified",
+      message: `Account has been verified successfully.`,
       type: "verification"
     });
 

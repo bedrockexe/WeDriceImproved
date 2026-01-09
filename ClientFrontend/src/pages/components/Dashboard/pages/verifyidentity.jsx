@@ -15,10 +15,12 @@ import { format, subYears } from "date-fns";
 import { toast, Toaster } from "sonner";
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useNotifications } from "../../../../NotificationWrapper";
 
 
 const VerifyIdentity = () => {
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const { fetchNotifications } = useNotifications();
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -158,6 +160,8 @@ const VerifyIdentity = () => {
         setVerificationStatus("pending");
         queryClient.invalidateQueries(["currentuser"]);
       }
+
+      fetchNotifications();
 
       setTimeout(() => {
         toast.success("Verification documents submitted successfully!", {

@@ -19,40 +19,43 @@ import { AuthProvider } from "./authentication/AuthContext";
 import ProtectedRoute from "./routeprotector/RouteProtector";
 import ProfileSettings from "./pages/Profile";
 import NotificationsPage from "./components/NotificationPage";
+import { NotificationProvider } from "./NotificationWrapper";
 import Test from "./Test";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <AuthProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<LoginPage />} />
-            <Route path="/forgot-password" element={<ResetPasswordPage />} />
-            <Route path="/reset-password/:token" element={<NewPasswordPage />} />
-            <Route path="/test" element={<Test />} />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<Layout />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard/profile" element={<ProfileSettings />} />
-                <Route path="/dashboard/notifications" element={<NotificationsPage />} />
-                <Route path="/dashboard/bookings" element={<BookingManagement />} />
-                <Route path="/dashboard/customers" element={<AdminVerification />} />
-                <Route path="/dashboard/fleet" element={<AdminFleetManagement />} />
-                <Route path="/dashboard/history" element={<History />} />
-                <Route path="/dashboard/calendar" element={<Calendar />} />
-                <Route path="/dashboard/settings" element={<Settings />} />
-                <Route path="/dashboard/help" element={<Help />} />
+    <NotificationProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ResetPasswordPage />} />
+              <Route path="/reset-password/:token" element={<NewPasswordPage />} />
+              <Route path="/test" element={<Test />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<Layout />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard/profile" element={<ProfileSettings />} />
+                  <Route path="/dashboard/notifications" element={<NotificationsPage />} />
+                  <Route path="/dashboard/bookings" element={<BookingManagement />} />
+                  <Route path="/dashboard/customers" element={<AdminVerification />} />
+                  <Route path="/dashboard/fleet" element={<AdminFleetManagement />} />
+                  <Route path="/dashboard/history" element={<History />} />
+                  <Route path="/dashboard/calendar" element={<Calendar />} />
+                  <Route path="/dashboard/settings" element={<Settings />} />
+                  <Route path="/dashboard/help" element={<Help />} />
+                </Route>
               </Route>
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </NotificationProvider>
   </AuthProvider>
 );
 
